@@ -1,1 +1,4 @@
 .vscode/*
+*.exe
+*.dll
+DMG_ROM.bin

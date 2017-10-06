@@ -1,3 +1,6 @@
+#ifndef GB_CPU
+#define GB_CPU
+
 typedef unsigned char BYTE;
 typedef char S_BYTE;
 typedef unsigned short WORD;
@@ -9,10 +12,10 @@ typedef short S_WORD;
 #define CHANNELS 3
 
 // CPU Constants
-#define CPU_FLAG_ZERO 7 // Zero flag
+#define CPU_FLAG_Z 7    // Zero flag
 #define CPU_FLAG_N 6    // Add/Sub flag (BCD)
 #define CPU_FLAG_H 5    // Half carry flag (BCD)
-#define CPU_FLAG_CY 4   // Carry flag
+#define CPU_FLAG_C 4    // Carry flag
 
 // Memory Constants
 #define GAME_PAK_SIZE 0x200000
@@ -24,22 +27,39 @@ BYTE memGamePak[GAME_PAK_SIZE];
 // The Gameboy's in unit main memory
 BYTE memMainRAM[MAIN_MEM_SIZE];
 
-union cpuReg
+// A union that creates the cpuReg type. Eases access to hi and lo BYTES of a WORD
+typedef union
 {
-    WORD val;
+    WORD word;
     struct
     {
         BYTE lo;
         BYTE hi;
     };
-};
+} cpuRegVal;
 
-cpuReg regAF;
-cpuReg regBC;
-cpuReg regDE;
-cpuReg regHL;
+typedef struct
+{
+    char *name;
+    cpuRegVal val;
+} cpuReg;
 
-WORD PC;
-cpuReg SP;
+// Main CPU registers
+cpuReg regAF; //regAF.name = "AF";
+cpuReg regBC; //regBC.name = "BC";
+cpuReg regDE; //regDE.name = "DE";
+cpuReg regHL; //regHL.name = "HL";
 
+cpuReg PC;  // Program Counter
+cpuReg SP;  // Stack Pointer. cpuReg allows easier access to hi and lo BYTES
+
+// Buffer that represents the screen's state at any given time
 BYTE screenData[SCREEN_HEIGHT][SCREEN_WIDTH][CHANNELS];
+
+void InitSystem();
+WORD Fetch();
+void DecodeExecute(WORD opcode);
+
+void LoadByteImmediate(cpuReg dest, BYTE source);
+
+#endif

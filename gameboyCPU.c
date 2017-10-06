@@ -6,10 +6,13 @@
 
 int main(int argc, char **argv)
 {
+    WORD opcode = 0x0000;
+
     // Check for valid usage
     if(argc != 3)
     {
-        fprintf(stderr, "USAGE ERROR!\nCorrect Usage: gameboy-emu <rom-file> <graphics-multiple>.");
+        fprintf(stderr,
+            "USAGE ERROR!\nCorrect Usage: gameboy-emu <rom-file> <graphics-multiple>.");
         return -1;
     }
     
@@ -29,6 +32,7 @@ int main(int argc, char **argv)
     }
     const unsigned int MULTIPLIER = atoi(argv[2]);
 
+    SDL_Window *window = NULL;
 
     // Initialize SDL
     if(SDL_Init(SDL_INIT_VIDEO) < 0)
@@ -39,10 +43,10 @@ int main(int argc, char **argv)
     else
     {
         // Create window
-        *window = SDL_CreateWindow("gameboy-emu", SDL_WINDOWPOS_UNDEFINED,
-                  SDL_WINDOWPOS_UNDEFINED, SCREEN_WIDTH * MULTIPLIER,
-                  SCREEN_HEIGHT * MULTIPLIER, SDL_WINDOW_SHOWN);
-        if(*window == NULL)
+        window = SDL_CreateWindow("gameboy-emu", SDL_WINDOWPOS_UNDEFINED,
+                 SDL_WINDOWPOS_UNDEFINED, SCREEN_WIDTH * MULTIPLIER,
+                 SCREEN_HEIGHT * MULTIPLIER, SDL_WINDOW_SHOWN);
+        if(window == NULL)
         {
             fprintf(stderr, "SDL ERROR!\nWindow could not be created: %s", SDL_GetError());
             return -1;
@@ -60,6 +64,27 @@ int main(int argc, char **argv)
         // }
     }
 
+    FILE *dmg = NULL;
+    if((dmg = fopen("DMG_ROM.bin", "rb")) == NULL)
+    {
+        fprintf(stderr, "INITIALIZATION ERROR!\nCould not open DMG_ROM.bin");
+        return -1;
+    }
+    fread(&memMainRAM[0x0000], 0x0100, 1, dmg);
+
+    PC.val.word = 0x0000;
+    while(PC.val.word < 0x0100)
+    {
+        opcode = Fetch();
+        printf("0x%02X: ", opcode);
+
+        DecodeExecute(opcode);
+
+        printf("\n");
+    }
+
+    InitSystem();
+
     int quit = 0;
     SDL_Event event;
 
@@ -73,10 +98,70 @@ int main(int argc, char **argv)
                 quit = 1;
         }
 
-        // Fetch
+        // opcode = Fetch();
         // Decode
         // Execute
 
         // Draw Graphics
     }
+
+    return 0;
+}
+
+// (http://bgb.bircd.org/pandocs.htm#powerupsequence)
+void InitSystem()
+{
+    // Initialize registers
+    regAF.val.word = 0x01B0;
+    regBC.val.word = 0x0013;
+    regDE.val.word = 0x00D8;
+    regHL.val.word = 0x014D;
+
+    // Initialize program counter and stack pointer
+    PC.val.word = 0x0100;
+    SP.val.word = 0xFFFE;
+
+    // Initialize RAM (I/0 Special Registers)
+    memMainRAM[0xFF05] = 0x00;  // TIMA
+    memMainRAM[0xFF06] = 0x00;  // TMA
+    memMainRAM[0xFF07] = 0x00;  // TAC
+    memMainRAM[0xFF10] = 0x80;  // NR10
+    memMainRAM[0xFF11] = 0xBF;  // NR11
+    memMainRAM[0xFF12] = 0xF3;  // NR12
+    memMainRAM[0xFF14] = 0xBF;  // NR14
+    memMainRAM[0xFF16] = 0x3F;  // NR21
+    memMainRAM[0xFF17] = 0x00;  // NR22
+    memMainRAM[0xFF19] = 0xBF;  // NR24
+    memMainRAM[0xFF1A] = 0x7F;  // NR30
+    memMainRAM[0xFF1B] = 0xFF;  // NR31
+    memMainRAM[0xFF1C] = 0x9F;  // NR32
+    memMainRAM[0xFF1E] = 0xBF;  // NR33
+    memMainRAM[0xFF20] = 0xFF;  // NR41
+    memMainRAM[0xFF21] = 0x00;  // NR42
+    memMainRAM[0xFF22] = 0x00;  // NR43
+    memMainRAM[0xFF23] = 0xBF;  // NR30
+    memMainRAM[0xFF24] = 0x77;  // NR50
+    memMainRAM[0xFF25] = 0xF3;  // NR51
+    memMainRAM[0xFF26] = 0xF1;  // NR52
+    memMainRAM[0xFF40] = 0x91;  // LCDC
+    memMainRAM[0xFF42] = 0x00;  // SCY
+    memMainRAM[0xFF43] = 0x00;  // SCX
+    memMainRAM[0xFF45] = 0x00;  // LYC
+    memMainRAM[0xFF47] = 0xFC;  // BGP
+    memMainRAM[0xFF48] = 0xFF;  // OBP0
+    memMainRAM[0xFF49] = 0xFF;  // OBP1
+    memMainRAM[0xFF4A] = 0x00;  // WY
+    memMainRAM[0xFF4B] = 0x00;  // WX
+    memMainRAM[0xFFFF] = 0x00;  // IE
+}
+
+// Fetch the next opcode to be executed
+WORD Fetch()
+{
+    return memMainRAM[PC.val.word++];
+}
+
+void LoadByteImmediate(BYTE dest, BYTE source)
+{
+    printf("LD %s, 0x%02X", dest.name, source);
 }
