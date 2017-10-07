@@ -31,7 +31,7 @@ BYTE memMainRAM[MAIN_MEM_SIZE];
 union cpuReg
 {
     WORD word;
-    struct
+    struct byte
     {
         BYTE lo;
         BYTE hi;
@@ -55,5 +55,6 @@ WORD Fetch();
 void DecodeExecute(WORD opcode);
 
 void LoadByteImmediate(BYTE *dest, BYTE source);
+void LoadByteRegister(BYTE *dest, BYTE source);
 
 #endif

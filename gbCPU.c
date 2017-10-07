@@ -165,3 +165,8 @@ void LoadByteImmediate(BYTE *dest, BYTE source)
 {
     printf(" --> LoadByteImmediate()");
 }
+
+void LoadByteRegister(BYTE *dest, BYTE source)
+{
+    printf(" --> LoadByteRegister()");
+}
