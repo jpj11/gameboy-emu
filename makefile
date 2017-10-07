@@ -1,5 +1,5 @@
 #OBJS specifies which files to compile as part of the project
-OBJS = gameboyCPU.c opcodeSwitch.c
+OBJS = gbCPU.c gbCPU.switch.c
 
 #CC specifies which compiler we're using
 CC = gcc

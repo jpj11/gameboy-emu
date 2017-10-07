@@ -2,7 +2,7 @@
 #include <stdlib.h>
 #include <SDL2/SDL.h>
 
-#include "gameboyCPU.h"
+#include "gbCPU.h"
 
 int main(int argc, char **argv)
 {
@@ -72,8 +72,8 @@ int main(int argc, char **argv)
     }
     fread(&memMainRAM[0x0000], 0x0100, 1, dmg);
 
-    PC.val.word = 0x0000;
-    while(PC.val.word < 0x0100)
+    PC.word = 0x0000;
+    while(PC.word < 0x0100)
     {
         opcode = Fetch();
         printf("0x%02X: ", opcode);
@@ -112,14 +112,14 @@ int main(int argc, char **argv)
 void InitSystem()
 {
     // Initialize registers
-    regAF.val.word = 0x01B0;
-    regBC.val.word = 0x0013;
-    regDE.val.word = 0x00D8;
-    regHL.val.word = 0x014D;
+    regAF.word = 0x01B0;
+    regBC.word = 0x0013;
+    regDE.word = 0x00D8;
+    regHL.word = 0x014D;
 
     // Initialize program counter and stack pointer
-    PC.val.word = 0x0100;
-    SP.val.word = 0xFFFE;
+    PC.word = 0x0100;
+    SP.word = 0xFFFE;
 
     // Initialize RAM (I/0 Special Registers)
     memMainRAM[0xFF05] = 0x00;  // TIMA
@@ -158,10 +158,10 @@ void InitSystem()
 // Fetch the next opcode to be executed
 WORD Fetch()
 {
-    return memMainRAM[PC.val.word++];
+    return memMainRAM[PC.word++];
 }
 
-void LoadByteImmediate(BYTE dest, BYTE source)
+void LoadByteImmediate(BYTE *dest, BYTE source)
 {
-    printf("LD %s, 0x%02X", dest.name, source);
+    printf(" --> LoadByteImmediate()");
 }
