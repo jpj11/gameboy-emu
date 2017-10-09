@@ -54,7 +54,6 @@ void InitSystem();
 WORD Fetch();
 void DecodeExecute(WORD opcode);
 
-void LoadByteImmediate(BYTE *dest, BYTE source);
-void LoadByteRegister(BYTE *dest, BYTE source);
+void LoadByte(BYTE *dest, BYTE source, unsigned int cycles);
 
 #endif

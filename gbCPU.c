@@ -161,12 +161,7 @@ WORD Fetch()
     return memMainRAM[PC.word++];
 }
 
-void LoadByteImmediate(BYTE *dest, BYTE source)
+void LoadByte(BYTE *dest, BYTE source, unsigned int cycles)
 {
-    printf(" --> LoadByteImmediate()");
-}
-
-void LoadByteRegister(BYTE *dest, BYTE source)
-{
-    printf(" --> LoadByteRegister()");
+    printf(" --> LoadByte()");
 }
