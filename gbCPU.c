@@ -185,7 +185,19 @@ int WriteByte(WORD address, BYTE data, FILE *output)
     return 1;
 }
 
+WORD ReadWord(WORD address, FILE *output)
+{
+    //fprintf(output, " --> ReadWord(%0#6x)", address);
+    return 0x0000;
+}
+
 void LoadByte(BYTE *dest, BYTE source, unsigned int cycles, FILE *output)
 {
     fprintf(output, " --> LoadByte(%0#x, %0#4x, %d)", (unsigned int)dest, source, cycles);
+}
+
+void StoreByte(WORD address, BYTE data, unsigned int cycles, FILE *output)
+{
+    fprintf(output, " --> StoreByte(%0#6x, %0#4x, %d)", address, data, cycles);
+    WriteByte(address, data, output);
 }

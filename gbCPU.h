@@ -16,6 +16,7 @@ typedef short S_WORD;
 #define CPU_FLAG_N 6    // Add/Sub flag (BCD)
 #define CPU_FLAG_H 5    // Half carry flag (BCD)
 #define CPU_FLAG_C 4    // Carry flag
+#define REG_P1 0xFF00
 
 // Memory Constants
 #define GAME_PAK_SIZE 0x200000
@@ -57,6 +58,9 @@ void DecodeExecute(WORD opcode, FILE *output);
 BYTE ReadByte(WORD address, FILE *output);
 int WriteByte(WORD address, BYTE data, FILE *output);
 
+WORD ReadWord(WORD address, FILE *output);
+
 void LoadByte(BYTE *dest, BYTE source, unsigned int cycles, FILE *output);
+void StoreByte(WORD address, BYTE data, unsigned int cycles, FILE *output);
 
 #endif
