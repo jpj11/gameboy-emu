@@ -52,8 +52,11 @@ BYTE screenData[SCREEN_HEIGHT][SCREEN_WIDTH][CHANNELS];
 
 void InitSystem();
 WORD Fetch();
-void DecodeExecute(WORD opcode);
+void DecodeExecute(WORD opcode, FILE *output);
 
-void LoadByte(BYTE *dest, BYTE source, unsigned int cycles);
+BYTE ReadByte(WORD address, FILE *output);
+int WriteByte(WORD address, BYTE data, FILE *output);
+
+void LoadByte(BYTE *dest, BYTE source, unsigned int cycles, FILE *output);
 
 #endif

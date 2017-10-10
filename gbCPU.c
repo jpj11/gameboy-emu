@@ -9,20 +9,21 @@ int main(int argc, char **argv)
     WORD opcode = 0x0000;
 
     // Check for valid usage
-    if(argc != 3)
+    if(argc < 3 || argc > 4)
     {
         fprintf(stderr,
-            "USAGE ERROR!\nCorrect Usage: gameboy-emu <rom-file> <graphics-multiple>.");
+            "USAGE ERROR!\nCorrect Usage: gameboy-emu <rom-file> <graphics-multiple> <optional-output-file>");
         return -1;
     }
     
     // Open ROM file
-    FILE *input;
+    FILE *input = NULL;
     if((input = fopen(argv[1], "rb")) == NULL)
     {
-        fprintf(stderr, "FILE I/O ERROR!\nCould not open file \"%s\".", argv[1]);
+        fprintf(stderr, "FILE I/O ERROR!\nCould not open file \"%s\"", argv[1]);
         return -1;
     }
+    fclose(input);
 
     // Check for valid multiplier
     if(atoi(argv[2]) <= 0)
@@ -31,6 +32,14 @@ int main(int argc, char **argv)
         return -1;
     }
     const unsigned int MULTIPLIER = atoi(argv[2]);
+
+    // Check for output file
+    FILE *output = NULL;
+    if((argc == 4) && ((output = fopen(argv[3], "w")) == NULL))
+    {
+        fprintf(stderr, "FILE I/O ERROR!\nCould not open file \"%s\"", argv[3]);
+        return -1;
+    }
 
     SDL_Window *window = NULL;
 
@@ -76,12 +85,15 @@ int main(int argc, char **argv)
     while(PC.word < 0x0100)
     {
         opcode = Fetch();
-        printf("0x%02X: ", opcode);
+        fprintf(output, "%0#4x: ", opcode);
 
-        DecodeExecute(opcode);
+        DecodeExecute(opcode, output);
 
-        printf("\n");
+        fprintf(output, "\n");
     }
+
+    if(output)
+        fclose(output);
 
     InitSystem();
 
@@ -161,7 +173,19 @@ WORD Fetch()
     return memMainRAM[PC.word++];
 }
 
-void LoadByte(BYTE *dest, BYTE source, unsigned int cycles)
+BYTE ReadByte(WORD address, FILE *output)
 {
-    printf(" --> LoadByte()");
+    fprintf(output, " --> ReadByte(%0#6x)", address);
+    return 0x00;
+}
+
+int WriteByte(WORD address, BYTE data, FILE *output)
+{
+    fprintf(output, " --> WriteByte(%0#6x, %0#4x)", address, data);
+    return 1;
+}
+
+void LoadByte(BYTE *dest, BYTE source, unsigned int cycles, FILE *output)
+{
+    fprintf(output, " --> LoadByte(%0#x, %0#4x, %d)", (unsigned int)dest, source, cycles);
 }
