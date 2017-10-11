@@ -260,8 +260,11 @@ void DecodeExecute(WORD opcode, FILE *output)
                    LoadByte(&regAF.hi, ReadByte(regDE.word, output), 8, output);
                    break;
         case 0xFA: fprintf(output, OPSM, "LD", "A", ReadWord(memMainRAM[PC.word], output));
-                   LoadByte(&regAF.hi, ReadWord(memMainRAM[PC.word], output), 16, output);
-                   PC.word += 2; break;
+                   LoadByte(&regAF.hi,
+                            ReadWord(memMainRAM[PC.word], output),
+                            16, output);
+                   PC.word += 2;
+                   break;
 
         // LOAD BYTE REGISTER A INTO MEMORY (8 or 16 CYCLES) //
         case 0x02: fprintf(output, OPSS, "LD", "(BC)", "A");
@@ -271,10 +274,59 @@ void DecodeExecute(WORD opcode, FILE *output)
                    StoreByte(regDE.word, regAF.hi, 8, output);
                    break;
         case 0xEA: fprintf(output, OPMS, "LD", ReadWord(memMainRAM[PC.word], output), "A");
-                   StoreByte(ReadWord(memMainRAM[PC.word], output), regAF.hi, 16, output);
-                   PC.word += 2; break;
+                   StoreByte(ReadWord(memMainRAM[PC.word], output),
+                             regAF.hi,
+                             16, output);
+                   PC.word += 2;
+                   break;
 
-        case 0xF0: fprintf(output, OPSMO, "LD", "A", REG_P1, memMainRAM[PC.word]); 
+        // LOAD BYTE MEMORY AT P1 + OFFSET INTO REGSITER A (12 CYCLES) //
+        case 0xF0: fprintf(output, OPSMO, "LD", "A", REG_P1, memMainRAM[PC.word]);
+                   LoadByte(&regAF.hi,
+                            ReadByte(REG_P1 + memMainRAM[PC.word++], output),
+                            12, output);
+                   break;
+
+        // LOAD BYTE REGISTER A INTO MEMORY AT P1 + OFFSET (12 CYCLES) //
+        case 0xE0: fprintf(output, OPMOS, "LD", REG_P1, memMainRAM[PC.word], "A");
+                   StoreByte(REG_P1 + memMainRAM[PC.word++],
+                             regAF.hi,
+                             12, output);
+                   break;
+
+        // LOAD BYTE MEMORY AT P1 + REGISTER C INTO REGSITER A (12 CYCLES) //
+        case 0xF2: fprintf(output, OPSMO, "LD", "A", REG_P1, regBC.lo);
+                   LoadByte(&regAF.hi,
+                            ReadByte(REG_P1 + regBC.lo, output),
+                            12, output);
+                   break;
+
+        // LOAD BYTE REGISTER A INTO MEMORY AT P1 + REGISTER C (12 CYCLES) //
+        case 0xE2: fprintf(output, OPMOS, "LD", REG_P1, regBC.lo, "A");
+                   StoreByte(REG_P1 + regBC.lo,
+                             regAF.hi,
+                             12, output);
+                   break;
+
+        // LOAD BYTE REGISTER A INTO MEMORY AT HL THEN INCREMENT HL (8 CYCLES) //
+        case 0x22: fprintf(output, OPSS, "LDI", "(HL)", "A");
+                   StoreByte(regHL.word++, regAF.hi, 8, output);
+                   break;
+
+        // LOAD BYTE MEMORY AT HL INTO REGISTER A THEN INCREMENT HL (8 CYCLES) //
+        case 0x2A: fprintf(output, OPSS, "LDI", "A", "(HL)");
+                   LoadByte(&regAF.hi, ReadByte(regHL.word++, output), 8, output);
+                   break;
+
+        // LOAD BYTE REGISTER A INTO MEMORY AT HL THEN DECREMENT HL (8 CYCLES) //
+        case 0x32: fprintf(output, OPSS, "LDD", "(HL)", "A");
+                   StoreByte(regHL.word--, regAF.hi, 8, output);
+                   break;
+
+        // LOAD BYTE MEMORY AT HL INTO REGISTER A THEN DECREMENT HL (8 CYCLES) //
+        case 0x3A: fprintf(output, OPSS, "LDD", "A", "(HL)");
+                   LoadByte(&regAF.hi, ReadByte(regHL.word--, output), 8, output);
+                   break;
 
         default: fprintf(output, " ");
     }
