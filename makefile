@@ -1,14 +1,14 @@
 #OBJS specifies which files to compile as part of the project
-OBJS = gbCPU.c gbCPU.switch.c
+OBJS = gbCPU.c gbCPU.decode.c
 
 #CC specifies which compiler we're using
-CC = gcc
+CC = x86_64-w64-mingw32-gcc-7.1.0.exe
 
 #INCLUDE_PATHS specifies the additional include paths we'll need
-INCLUDE_PATHS = -IC:/i686-w64-mingw32/include
+INCLUDE_PATHS = -IC:/x86_64-w64-mingw32/include
 
 #LIBRARY_PATHS specifies the additional library paths we'll need
-LIBRARY_PATHS = -LC:/i686-w64-mingw32/lib
+LIBRARY_PATHS = -LC:/x86_64-w64-mingw32/lib
 
 #COMPILER_FLAGS specifies the additional compilation options we're using
 # -w suppresses all warnings

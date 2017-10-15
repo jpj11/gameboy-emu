@@ -84,8 +84,7 @@ int main(int argc, char **argv)
     PC.word = 0x0000;
     while(PC.word < 0x0100)
     {
-        opcode = Fetch();
-        fprintf(output, "%0#4x: ", opcode);
+        opcode = Fetch(output);
 
         DecodeExecute(opcode, output);
 
@@ -168,9 +167,18 @@ void InitSystem()
 }
 
 // Fetch the next opcode to be executed
-WORD Fetch()
+BYTE Fetch(FILE *output)
 {
-    return memMainRAM[PC.word++];
+    BYTE val = memMainRAM[PC.word++];
+    fprintf(output, "%0#4x --> ", val);
+    return val;
+}
+
+WORD GetImmediateWord(FILE *output)
+{
+    WORD val = Fetch(output);
+    val |= Fetch(output) << 8;
+    return val;
 }
 
 BYTE ReadByte(WORD address, FILE *output)
@@ -185,15 +193,9 @@ int WriteByte(WORD address, BYTE data, FILE *output)
     return 1;
 }
 
-WORD ReadWord(WORD address, FILE *output)
-{
-    //fprintf(output, " --> ReadWord(%0#6x)", address);
-    return 0x0000;
-}
-
 void LoadByte(BYTE *dest, BYTE source, unsigned int cycles, FILE *output)
 {
-    fprintf(output, " --> LoadByte(%0#x, %0#4x, %d)", (unsigned int)dest, source, cycles);
+    fprintf(output, " --> LoadByte(%p, %0#4x, %d)", dest, source, cycles);
 }
 
 void StoreByte(WORD address, BYTE data, unsigned int cycles, FILE *output)

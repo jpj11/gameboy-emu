@@ -52,13 +52,12 @@ union cpuReg SP;  // Stack Pointer. cpuReg allows easier access to hi and lo BYT
 BYTE screenData[SCREEN_HEIGHT][SCREEN_WIDTH][CHANNELS];
 
 void InitSystem();
-WORD Fetch();
-void DecodeExecute(WORD opcode, FILE *output);
+BYTE Fetch(FILE *output);
+void DecodeExecute(BYTE opcode, FILE *output);
+WORD GetImmediateWord(FILE *output);
 
 BYTE ReadByte(WORD address, FILE *output);
 int WriteByte(WORD address, BYTE data, FILE *output);
-
-WORD ReadWord(WORD address, FILE *output);
 
 void LoadByte(BYTE *dest, BYTE source, unsigned int cycles, FILE *output);
 void StoreByte(WORD address, BYTE data, unsigned int cycles, FILE *output);
