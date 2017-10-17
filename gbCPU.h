@@ -56,10 +56,4 @@ BYTE Fetch(FILE *output);
 void DecodeExecute(BYTE opcode, FILE *output);
 WORD GetImmediateWord(FILE *output);
 
-BYTE ReadByte(WORD address, FILE *output);
-int WriteByte(WORD address, BYTE data, FILE *output);
-
-void LoadByte(BYTE *dest, BYTE source, unsigned int cycles, FILE *output);
-void StoreByte(WORD address, BYTE data, unsigned int cycles, FILE *output);
-
 #endif

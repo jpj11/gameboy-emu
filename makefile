@@ -1,5 +1,5 @@
 #OBJS specifies which files to compile as part of the project
-OBJS = gbCPU.c gbCPU.decode.c
+OBJS = gameboy-emu.c gbCPU.c gbCPU.decode.c
 
 #CC specifies which compiler we're using
 CC = x86_64-w64-mingw32-gcc-7.1.0.exe
