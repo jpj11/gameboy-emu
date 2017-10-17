@@ -15,24 +15,31 @@
 #define OPWMR "%s (%0#6x), %s"
 #define OPRWM "%s %s, (%0#6x)"
 
-void DecodeExecuteCB(BYTE opcode, FILE *output);
+short DecodeExecuteCB(BYTE opcode, FILE *output);
 
-void DecodeExecute(BYTE opcode, FILE *output)
+short DecodeExecute(BYTE opcode, FILE *output)
 {
+    short cycles = -1;
+
     switch(opcode)
     {
         // Load immediate word into register
-        case 0x01: fprintf(output, OPRW, "LD", "BC", GetImmediateWord(output));
+        case 0x01: cycles = LoadWord(&regBC.word, GetImmediateWord(output), immediate);
+                   fprintf(output, OPRW, "LD", "BC", regBC.word);
                    break;
-        case 0x11: fprintf(output, OPRW, "LD", "DE", GetImmediateWord(output));
+        case 0x11: cycles = LoadWord(&regDE.word, GetImmediateWord(output), immediate);
+                   fprintf(output, OPRW, "LD", "DE", regBC.word);
                    break;
-        case 0x21: fprintf(output, OPRW, "LD", "HL", GetImmediateWord(output));
+        case 0x21: cycles = LoadWord(&regHL.word, GetImmediateWord(output), immediate);
+                   fprintf(output, OPRW, "LD", "HL", regHL.word);
                    break;
-        case 0x31: fprintf(output, OPRW, "LD", "SP", GetImmediateWord(output));
+        case 0x31: cycles = LoadWord(&SP.word, GetImmediateWord(output), immediate);
+                   fprintf(output, OPRW, "LD", "SP", SP.word);
                    break;
 
         // Load / Store byte in memory into register A
-        case 0x02: fprintf(output, OPRR, "LD", "(BC)", "A");
+        case 0x02: //cycles = LoadByte()
+                   fprintf(output, OPRR, "LD", "(BC)", "A");
                    break;
         case 0x12: fprintf(output, OPRR, "LD", "(DE)", "A");
                    break;
@@ -320,21 +327,29 @@ void DecodeExecute(BYTE opcode, FILE *output)
                    break;                                                                                                                  
 
         // Xor register / memory
-        case 0xa8: fprintf(output, OPR, "XOR", "B");
+        case 0xa8: cycles = Xor(regBC.hi, reg);
+                   fprintf(output, OPR, "XOR", "B");
                    break;
-        case 0xa9: fprintf(output, OPR, "XOR", "C");
+        case 0xa9: cycles = Xor(regBC.lo, reg);
+                   fprintf(output, OPR, "XOR", "C");
                    break;
-        case 0xaa: fprintf(output, OPR, "XOR", "D");
+        case 0xaa: cycles = Xor(regDE.hi, reg);
+                   fprintf(output, OPR, "XOR", "D");
                    break;
-        case 0xab: fprintf(output, OPR, "XOR", "E");
+        case 0xab: cycles = Xor(regDE.lo, reg);
+                   fprintf(output, OPR, "XOR", "E");
                    break;
-        case 0xac: fprintf(output, OPR, "XOR", "H");
+        case 0xac: cycles = Xor(regHL.hi, reg);
+                   fprintf(output, OPR, "XOR", "H");
                    break;
-        case 0xad: fprintf(output, OPR, "XOR", "L");
+        case 0xad: cycles = Xor(regHL.lo, reg);
+                   fprintf(output, OPR, "XOR", "L");
                    break;
-        case 0xae: fprintf(output, OPR, "XOR", "(HL)");
+        case 0xae: //cycles = Xor(regBC.hi, reg);
+                   fprintf(output, OPR, "XOR", "(HL)");
                    break;
-        case 0xaf: fprintf(output, OPR, "XOR", "A");
+        case 0xaf: cycles = Xor(regAF.hi, reg);
+                   fprintf(output, OPR, "XOR", "A");
                    break;
 
         // Compare byte with register A
@@ -391,7 +406,7 @@ void DecodeExecute(BYTE opcode, FILE *output)
 
         // Opcode cb is a prefix for many instructions. Fetch next opcode and decode to determine
         // the appropriate operation to execute
-        case 0xcb: DecodeExecuteCB(Fetch(output), output);
+        case 0xcb: cycles = DecodeExecuteCB(Fetch(output), output);
                    break;
 
         // Call subroutine at immediate word address
@@ -428,10 +443,14 @@ void DecodeExecute(BYTE opcode, FILE *output)
         case 0xfe: fprintf(output, OPB, "CP", Fetch(output));
                    break;
     }
+    
+    return cycles;
 }
 
-void DecodeExecuteCB(BYTE opcode, FILE *output)
+short DecodeExecuteCB(BYTE opcode, FILE *output)
 {
+    short cycles = -1;
+
     switch (opcode)
     {
         // Rotate left through carry
@@ -596,4 +615,6 @@ void DecodeExecuteCB(BYTE opcode, FILE *output)
         case 0x7f: fprintf(output, OPRR, "BIT", "7", "A");
                    break;                       
     }
+    
+    return cycles;
 }

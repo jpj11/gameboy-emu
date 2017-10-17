@@ -45,7 +45,7 @@ int main(int argc, char **argv)
         fprintf(stderr, "INITIALIZATION ERROR!\nCould not open DMG_ROM.bin");
         return -1;
     }
-    fread(&memMainRAM[0x0000], 0x0100, 1, dmg);
+    fread(&mainMemory[0x0000], 0x0100, 1, dmg);
 
     SDL_Window *window = NULL;
 
@@ -79,15 +79,16 @@ int main(int argc, char **argv)
         // }
     }
 
+    short cycles = -1;
     BYTE opcode = 0x00;
     PC.word = 0x0000;
     while(PC.word < 0x0100)
     {
-        opcode = Fetch(output);
+        opcode = Fetch(stdout);
 
-        DecodeExecute(opcode, output);
+        cycles = DecodeExecute(opcode, stdout);
 
-        fprintf(output, "\n");
+        fprintf(stdout, " <> %d cycles\n", cycles);
     }
 
     if(output)
