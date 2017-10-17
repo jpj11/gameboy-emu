@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include "gbCPU.h"
 
+#define OP    "%s"
 #define OPL   "%s %d"
 #define OPR   "%s %s"
 #define OPB   "%s %0#4x"
@@ -58,34 +59,6 @@ void DecodeExecute(BYTE opcode, FILE *output)
         case 0x33: fprintf(output, OPR, "INC", "SP");
                    break;                                      
 
-        // Load immediate byte into register
-        case 0x06: fprintf(output, OPRB, "LD", "B", Fetch(output));
-                   break;
-        case 0x0e: fprintf(output, OPRB, "LD", "C", Fetch(output));
-                   break;           
-        case 0x16: fprintf(output, OPRB, "LD", "D", Fetch(output));
-                   break;
-        case 0x1e: fprintf(output, OPRB, "LD", "E", Fetch(output));
-                   break;
-        case 0x26: fprintf(output, OPRB, "LD", "H", Fetch(output));
-                   break;
-        case 0x2e: fprintf(output, OPRB, "LD", "L", Fetch(output));
-                   break;
-        case 0x36: fprintf(output, OPRB, "LD", "(HL)", Fetch(output));
-                   break;
-        case 0x3e: fprintf(output, OPRB, "LD", "A", Fetch(output));
-                   break;                                                                                               
-
-        // Decrement word
-        case 0x0b: fprintf(output, OPR, "DEC", "BC");
-                   break;
-        case 0x1b: fprintf(output, OPR, "DEC", "DE");
-                   break;
-        case 0x2b: fprintf(output, OPR, "DEC", "HL");
-                   break;
-        case 0x3b: fprintf(output, OPR, "DEC", "SP");
-                   break;                                   
-
         // Increment byte
         case 0x04: fprintf(output, OPR, "INC", "B");
                    break;
@@ -120,7 +93,41 @@ void DecodeExecute(BYTE opcode, FILE *output)
         case 0x35: fprintf(output, OPR, "DEC", "(HL)");
                    break;
         case 0x3d: fprintf(output, OPR, "DEC", "A");
-                   break;                                                                                                                                     
+                   break;                      
+
+        // Load immediate byte into register
+        case 0x06: fprintf(output, OPRB, "LD", "B", Fetch(output));
+                   break;
+        case 0x0e: fprintf(output, OPRB, "LD", "C", Fetch(output));
+                   break;           
+        case 0x16: fprintf(output, OPRB, "LD", "D", Fetch(output));
+                   break;
+        case 0x1e: fprintf(output, OPRB, "LD", "E", Fetch(output));
+                   break;
+        case 0x26: fprintf(output, OPRB, "LD", "H", Fetch(output));
+                   break;
+        case 0x2e: fprintf(output, OPRB, "LD", "L", Fetch(output));
+                   break;
+        case 0x36: fprintf(output, OPRB, "LD", "(HL)", Fetch(output));
+                   break;
+        case 0x3e: fprintf(output, OPRB, "LD", "A", Fetch(output));
+                   break;                                                                                               
+
+        // Decrement word
+        case 0x0b: fprintf(output, OPR, "DEC", "BC");
+                   break;
+        case 0x1b: fprintf(output, OPR, "DEC", "DE");
+                   break;
+        case 0x2b: fprintf(output, OPR, "DEC", "HL");
+                   break;
+        case 0x3b: fprintf(output, OPR, "DEC", "SP");
+                   break;                                                                                                                                                                     
+
+        // Rotate register A left / right through carry flag
+        case 0x17: fprintf(output, OP, "RLA");
+                   break;
+        case 0x1F: fprintf(output, OP, "RRA");
+                   break;
 
         // Jump relative to current PC
         case 0x18: fprintf(output, OPL, "JR", (S_BYTE)Fetch(output));
@@ -276,6 +283,24 @@ void DecodeExecute(BYTE opcode, FILE *output)
         case 0x7f: fprintf(output, OPRR, "LD", "A", "A");
                    break;  
 
+        // Add byte to register A and store result in register A
+        case 0x80: fprintf(output, OPRR, "ADD", "A", "B");
+                   break;
+        case 0x81: fprintf(output, OPRR, "ADD", "A", "C");
+                   break;
+        case 0x82: fprintf(output, OPRR, "ADD", "A", "D");
+                   break;
+        case 0x83: fprintf(output, OPRR, "ADD", "A", "E");
+                   break;
+        case 0x84: fprintf(output, OPRR, "ADD", "A", "H");
+                   break;
+        case 0x85: fprintf(output, OPRR, "ADD", "A", "L");
+                   break;
+        case 0x86: fprintf(output, OPRR, "ADD", "A", "(HL)");
+                   break;
+        case 0x87: fprintf(output, OPRR, "ADD", "A", "A");
+                   break;                                                         
+
         // Subtract register / memory
         case 0x90: fprintf(output, OPR, "SUB", "B");
                    break;
@@ -310,6 +335,58 @@ void DecodeExecute(BYTE opcode, FILE *output)
         case 0xae: fprintf(output, OPR, "XOR", "(HL)");
                    break;
         case 0xaf: fprintf(output, OPR, "XOR", "A");
+                   break;
+
+        // Compare byte with register A
+        case 0xb8: fprintf(output, OPR, "CP", "B");
+                   break;
+        case 0xb9: fprintf(output, OPR, "CP", "C");
+                   break;
+        case 0xba: fprintf(output, OPR, "CP", "D");
+                   break;
+        case 0xbb: fprintf(output, OPR, "CP", "E");
+                   break;
+        case 0xbc: fprintf(output, OPR, "CP", "H");
+                   break;
+        case 0xbd: fprintf(output, OPR, "CP", "L");
+                   break;
+        case 0xbe: fprintf(output, OPR, "CP", "(HL)");
+                   break;
+        case 0xbf: fprintf(output, OPR, "CP", "A");
+                   break;                                                                                                                  
+
+        // Pop word off of stack
+        case 0xc1: fprintf(output, OPR, "POP", "BC");
+                   break;
+        case 0xd1: fprintf(output, OPR, "POP", "DE");
+                   break;
+        case 0xe1: fprintf(output, OPR, "POP", "HL");
+                   break;
+        case 0xf1: fprintf(output, OPR, "POP", "AF");
+                   break;                                      
+
+        // Push word onto stack
+        case 0xc5: fprintf(output, OPR, "PUSH", "BC");
+                   break;
+        case 0xd5: fprintf(output, OPR, "PUSH", "DE");
+                   break;
+        case 0xe5: fprintf(output, OPR, "PUSH", "HL");
+                   break;
+        case 0xf5: fprintf(output, OPR, "PUSH", "AF");
+                   break;                                      
+
+        // Return
+        case 0xc9: fprintf(output, OP, "RET");
+                   break;
+        case 0xd9: fprintf(output, OP, "RETI");
+                   break;
+        case 0xc8: fprintf(output, OPR, "RET", "Z");
+                   break;
+        case 0xd8: fprintf(output, OPR, "RET", "C");
+                   break;
+        case 0xc0: fprintf(output, OPR, "RET", "NZ");
+                   break;
+        case 0xd0: fprintf(output, OPR, "RET", "NC");
                    break;
 
         // Opcode cb is a prefix for many instructions. Fetch next opcode and decode to determine
@@ -357,6 +434,24 @@ void DecodeExecuteCB(BYTE opcode, FILE *output)
 {
     switch (opcode)
     {
+        // Rotate left through carry
+        case 0x10: fprintf(output, OPR, "RL", "B");
+                   break;
+        case 0x11: fprintf(output, OPR, "RL", "C");
+                   break;
+        case 0x12: fprintf(output, OPR, "RL", "D");
+                   break;
+        case 0x13: fprintf(output, OPR, "RL", "E");
+                   break;
+        case 0x14: fprintf(output, OPR, "RL", "H");
+                   break;
+        case 0x15: fprintf(output, OPR, "RL", "L");
+                   break;
+        case 0x16: fprintf(output, OPR, "RL", "(HL)");
+                   break;
+        case 0x17: fprintf(output, OPR, "RL", "A");
+                   break;                                                                                                                  
+
         // Test bit 0
         case 0x40: fprintf(output, OPRR, "BIT", "0", "B");
                    break;
