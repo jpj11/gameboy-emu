@@ -110,19 +110,32 @@ short Xor(BYTE value, enum operandType valueType)
     // Xor register A with value and store result in register A
     regAF.hi ^= value;
 
-    // Reset all flags
+    // Unset all flags
     regAF.lo = 0x00;
 
     // Set zero flag if the operation resulted in zero
     if(regAF.hi == 0x00)
-    {
-        BYTE mask = 1 << CPU_FLAG_Z;
-        regAF.lo |= mask;
-    }
+        regAF.lo |= 1 << CPU_FLAG_Z;
 
     // Return the appropriate number of cycles
     if(valueType == reg)
         return 4;
     else
         return 8;
+}
+
+short Bit(short position, BYTE *toTest)
+{
+    // Find the value of the bit at position in toTest
+    short value = (*toTest >> position) & 1;
+
+    // Set zero flag if value is zero
+    if(value == 0)
+        regAF.lo |= 1 << CPU_FLAG_Z;
+
+    // Set and unset other flags as necessary
+    regAF.lo &= ~(1 << CPU_FLAG_N);
+    regAF.lo |= 1 << CPU_FLAG_H;
+
+    return 8;
 }

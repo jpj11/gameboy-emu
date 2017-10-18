@@ -56,7 +56,8 @@ BYTE screenData[SCREEN_HEIGHT][SCREEN_WIDTH][CHANNELS];
 
 enum operandType{
     reg,
-    immediate
+    immediate,
+    memory
 };
 
 // int IsRegister(WORD *address);
@@ -71,5 +72,7 @@ short LoadWord(WORD *dest, WORD src, enum operandType srcType);
 short LoadByte(BYTE *dest, BYTE src, enum operandType srcType);
 
 short Xor(BYTE value, enum operandType valueType);
+
+short Bit(short bit, BYTE *toTest);
 
 #endif
