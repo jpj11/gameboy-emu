@@ -71,6 +71,8 @@ WORD GetImmediateWord(FILE *output);
 short LoadWord(WORD *dest, WORD src, enum operandType srcType);
 short LoadByte(BYTE *dest, BYTE src, enum operandType srcType);
 
+short JumpRelativeCond(char *cond, S_BYTE offset);
+
 short Xor(BYTE value, enum operandType valueType);
 
 short Bit(short bit, BYTE *toTest);

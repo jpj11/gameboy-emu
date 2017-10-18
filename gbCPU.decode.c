@@ -20,6 +20,7 @@ short DecodeExecuteCB(BYTE opcode, FILE *output);
 short DecodeExecute(BYTE opcode, FILE *output)
 {
     short cycles = -1;
+    S_BYTE offset = 0x00;
 
     switch(opcode)
     {
@@ -146,13 +147,21 @@ short DecodeExecute(BYTE opcode, FILE *output)
         // Jump relative to current PC
         case 0x18: fprintf(output, OPL, "JR", (S_BYTE)Fetch(output));
                    break;
-        case 0x28: fprintf(output, OPRL, "JR", "Z", (S_BYTE)Fetch(output));
+        case 0x28: offset = (S_BYTE)Fetch(output);
+                   cycles = JumpRelativeCond("Z", offset);
+                   fprintf(output, OPRL, "JR", "Z", offset);
                    break;
-        case 0x38: fprintf(output, OPRL, "JR", "C", (S_BYTE)Fetch(output));
+        case 0x38: offset = (S_BYTE)Fetch(output);
+                   cycles = JumpRelativeCond("C", offset);
+                   fprintf(output, OPRL, "JR", "C", offset);
                    break;                   
-        case 0x20: fprintf(output, OPRL, "JR", "NZ", (S_BYTE)Fetch(output));
+        case 0x20: offset = (S_BYTE)Fetch(output);
+                   cycles = JumpRelativeCond("NZ", offset);
+                   fprintf(output, OPRL, "JR", "NZ", offset);
                    break;
-        case 0x30: fprintf(output, OPRL, "JR", "NC", (S_BYTE)Fetch(output));
+        case 0x30: offset = (S_BYTE)Fetch(output);
+                   cycles = JumpRelativeCond("NC", offset);
+                   fprintf(output, OPRL, "JR", "NC", offset);
                    break;                                      
 
         // Load byte from register (or (HL)) into register B

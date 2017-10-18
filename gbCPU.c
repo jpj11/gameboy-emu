@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <string.h>
 #include "gbCPU.h"
 
 // int IsRegister(WORD *address)
@@ -105,6 +106,22 @@ short LoadByte(BYTE *dest, BYTE src, enum operandType srcType)
     return 8;
 }
 
+short JumpRelativeCond(char *cond, S_BYTE offset)
+{
+    short zFlag = (regAF.lo >> CPU_FLAG_Z) & 1;
+    short cFlag = (regAF.lo >> CPU_FLAG_C) & 1;
+
+    if( ((strcmp(cond, "Z" ) == 0) &&  zFlag) ||
+        ((strcmp(cond, "NZ") == 0) && !zFlag) ||
+        ((strcmp(cond, "C" ) == 0) &&  cFlag) ||
+        ((strcmp(cond, "NC") == 0) && !cFlag) )
+    {
+        PC.word += offset;
+    }
+
+    return 8;
+}
+
 short Xor(BYTE value, enum operandType valueType)
 {
     // Xor register A with value and store result in register A
@@ -113,9 +130,11 @@ short Xor(BYTE value, enum operandType valueType)
     // Unset all flags
     regAF.lo = 0x00;
 
-    // Set zero flag if the operation resulted in zero
+    // Set zero flag if the operation resulted in zero, otherwise unset
     if(regAF.hi == 0x00)
         regAF.lo |= 1 << CPU_FLAG_Z;
+    else
+        regAF.lo &= ~(1 << CPU_FLAG_Z);
 
     // Return the appropriate number of cycles
     if(valueType == reg)
@@ -129,9 +148,11 @@ short Bit(short position, BYTE *toTest)
     // Find the value of the bit at position in toTest
     short value = (*toTest >> position) & 1;
 
-    // Set zero flag if value is zero
+    // Set zero flag if value is zero, otherwise unset
     if(value == 0)
         regAF.lo |= 1 << CPU_FLAG_Z;
+    else
+        regAF.lo &= ~(1 << CPU_FLAG_Z);
 
     // Set and unset other flags as necessary
     regAF.lo &= ~(1 << CPU_FLAG_N);
