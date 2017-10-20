@@ -65,31 +65,43 @@ short DecodeExecute(BYTE opcode, FILE *output)
                    break;
 
         // Increment word
-        case 0x03: fprintf(output, OPR, "INC", "BC");
+        case 0x03: cycles = IncrementWord(&regBC.word);
+                   fprintf(output, OPR, "INC", "BC");
                    break;
-        case 0x13: fprintf(output, OPR, "INC", "DE");
+        case 0x13: cycles = IncrementWord(&regDE.word);
+                   fprintf(output, OPR, "INC", "DE");
                    break;
-        case 0x23: fprintf(output, OPR, "INC", "HL");
+        case 0x23: cycles = IncrementWord(&regHL.word);
+                   fprintf(output, OPR, "INC", "HL");
                    break;
-        case 0x33: fprintf(output, OPR, "INC", "SP");
+        case 0x33: cycles = IncrementWord(&SP.word);
+                   fprintf(output, OPR, "INC", "SP");
                    break;                                      
 
         // Increment byte
-        case 0x04: fprintf(output, OPR, "INC", "B");
+        case 0x04: cycles = IncrementByte(&regBC.hi, reg);
+                   fprintf(output, OPR, "INC", "B");
                    break;
-        case 0x0c: fprintf(output, OPR, "INC", "C");
+        case 0x0c: cycles = IncrementByte(&regBC.lo, reg);
+                   fprintf(output, OPR, "INC", "C");
                    break;
-        case 0x14: fprintf(output, OPR, "INC", "D");
+        case 0x14: cycles = IncrementByte(&regDE.hi, reg);
+                   fprintf(output, OPR, "INC", "D");
                    break;
-        case 0x1c: fprintf(output, OPR, "INC", "E");
+        case 0x1c: cycles = IncrementByte(&regDE.lo, reg);
+                   fprintf(output, OPR, "INC", "E");
                    break;
-        case 0x24: fprintf(output, OPR, "INC", "H");
+        case 0x24: cycles = IncrementByte(&regHL.hi, reg);
+                   fprintf(output, OPR, "INC", "H");
                    break;
-        case 0x2c: fprintf(output, OPR, "INC", "L");
+        case 0x2c: cycles = IncrementByte(&regHL.lo, reg);
+                   fprintf(output, OPR, "INC", "L");
                    break;
-        case 0x34: fprintf(output, OPR, "INC", "(HL)");
+        case 0x34: cycles = IncrementByte(&mainMemory[regHL.word], memory);
+                   fprintf(output, OPR, "INC", "(HL)");
                    break;
-        case 0x3c: fprintf(output, OPR, "INC", "A");
+        case 0x3c: cycles = IncrementByte(&regAF.hi, reg);
+                   fprintf(output, OPR, "INC", "A");
                    break;
 
         // Decrement byte

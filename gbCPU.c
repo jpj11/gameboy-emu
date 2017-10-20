@@ -24,6 +24,47 @@ BYTE *Write(BYTE *address)
     return NULL;
 }
 
+void SetFlag(enum cpuFlag flag)
+{
+    regAF.lo |= 1 << flag;
+}
+
+void UnsetFlag(enum cpuFlag flag)
+{
+    regAF.lo &= ~(1 << flag);
+}
+
+void ModifyFlag(enum cpuFlag flag, BYTE value)
+{
+    switch (flag)
+    {
+        case zero:
+            if(value == 0x00)
+                SetFlag(zero);
+            else
+                UnsetFlag(zero);
+            break;
+
+        case subtract: break;
+
+        case halfCarry:
+            if(value > 0xF)
+                SetFlag(halfCarry);
+            else
+                UnsetFlag(halfCarry);
+            break;
+
+        case carry:
+            if(value > 0xFF)
+                SetFlag(carry);
+            else
+                UnsetFlag(carry);
+            break;
+
+        default: break;
+    }
+}
+
 // (http://bgb.bircd.org/pandocs.htm#powerupsequence)
 void InitSystem()
 {
@@ -108,8 +149,8 @@ short LoadByte(BYTE *dest, BYTE src, enum operandType srcType)
 
 short JumpRelativeCond(char *cond, S_BYTE offset)
 {
-    short zFlag = (regAF.lo >> CPU_FLAG_Z) & 1;
-    short cFlag = (regAF.lo >> CPU_FLAG_C) & 1;
+    short zFlag = (regAF.lo >> zero) & 1;
+    short cFlag = (regAF.lo >> carry) & 1;
 
     if( ((strcmp(cond, "Z" ) == 0) &&  zFlag) ||
         ((strcmp(cond, "NZ") == 0) && !zFlag) ||
@@ -122,6 +163,34 @@ short JumpRelativeCond(char *cond, S_BYTE offset)
     return 8;
 }
 
+short IncrementWord(WORD *value)
+{
+    // Increment word by 1
+    *value = *value + 1;
+    return 8;
+}
+
+short IncrementByte(BYTE *value, enum operandType valueType)
+{
+    // Increment byte
+    *value = *value + 1;
+
+    // Set zero flag if the operation resulted in zero, otherwise unset
+    ModifyFlag(zero, *value);
+
+    // Unset subtract flag
+    UnsetFlag(subtract);
+
+    // Set half carry flag if the operation resulted in a half carry
+    ModifyFlag(halfCarry, *value);
+
+    // Return the appropriate number of cycles
+    if(valueType == reg)
+        return 4;
+    else
+        return 12;
+}
+
 short Xor(BYTE value, enum operandType valueType)
 {
     // Xor register A with value and store result in register A
@@ -131,10 +200,7 @@ short Xor(BYTE value, enum operandType valueType)
     regAF.lo = 0x00;
 
     // Set zero flag if the operation resulted in zero, otherwise unset
-    if(regAF.hi == 0x00)
-        regAF.lo |= 1 << CPU_FLAG_Z;
-    else
-        regAF.lo &= ~(1 << CPU_FLAG_Z);
+    ModifyFlag(zero, regAF.hi);
 
     // Return the appropriate number of cycles
     if(valueType == reg)
@@ -149,14 +215,11 @@ short Bit(short position, BYTE *toTest)
     short value = (*toTest >> position) & 1;
 
     // Set zero flag if value is zero, otherwise unset
-    if(value == 0)
-        regAF.lo |= 1 << CPU_FLAG_Z;
-    else
-        regAF.lo &= ~(1 << CPU_FLAG_Z);
+    ModifyFlag(zero, value);
 
     // Set and unset other flags as necessary
-    regAF.lo &= ~(1 << CPU_FLAG_N);
-    regAF.lo |= 1 << CPU_FLAG_H;
+    UnsetFlag(subtract);
+    SetFlag(halfCarry);
 
     return 8;
 }

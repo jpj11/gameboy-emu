@@ -12,10 +12,6 @@ typedef short S_WORD;
 #define CHANNELS 3
 
 // CPU Constants
-#define CPU_FLAG_Z 7    // Zero flag
-#define CPU_FLAG_N 6    // Add/Sub flag (BCD)
-#define CPU_FLAG_H 5    // Half carry flag (BCD)
-#define CPU_FLAG_C 4    // Carry flag
 #define REG_P1 0xFF00
 
 #define SRC_REG 0
@@ -60,6 +56,13 @@ enum operandType{
     memory
 };
 
+enum cpuFlag{
+    zero = 7,
+    subtract = 6,
+    halfCarry = 5,
+    carry = 4
+};
+
 // int IsRegister(WORD *address);
 BYTE *Write(BYTE *address);
 
@@ -73,6 +76,9 @@ short LoadByte(BYTE *dest, BYTE src, enum operandType srcType);
 
 short JumpRelativeCond(char *cond, S_BYTE offset);
 
+short IncrementWord(WORD *value);
+
+short IncrementByte(BYTE *value, enum operandType valueType);
 short Xor(BYTE value, enum operandType valueType);
 
 short Bit(short bit, BYTE *toTest);
