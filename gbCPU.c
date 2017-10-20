@@ -139,12 +139,20 @@ short LoadWord(WORD *dest, WORD src, enum operandType srcType)
         return 12;
 }
 
-short LoadByte(BYTE *dest, BYTE src, enum operandType srcType)
+short LoadByte(BYTE *dest, enum operandType destType, BYTE src, enum operandType srcType)
 {
     // Load source into destination
     *dest = src;
 
-    return 8;
+    // Return the appropriate number of cycles
+    if( (destType == memory && srcType == reg) ||
+        (destType == reg && srcType == memory) ||
+        (destType == reg && srcType == immediate) )
+    {
+        return 8;
+    }
+    else
+        return 12;
 }
 
 short JumpRelativeCond(char *cond, S_BYTE offset)

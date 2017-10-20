@@ -20,7 +20,7 @@ short DecodeExecuteCB(BYTE opcode, FILE *output);
 short DecodeExecute(BYTE opcode, FILE *output)
 {
     short cycles = -1;
-    S_BYTE offset = 0x00;
+    BYTE byteOffset = 0x00;
 
     switch(opcode)
     {
@@ -39,28 +39,28 @@ short DecodeExecute(BYTE opcode, FILE *output)
                    break;
 
         // Load / Store byte in memory into register A
-        case 0x02: cycles = LoadByte(&mainMemory[regBC.word], regAF.hi, reg);
+        case 0x02: cycles = LoadByte(&mainMemory[regBC.word], memory, regAF.hi, reg);
                    fprintf(output, OPRR, "LD", "(BC)", "A");
                    break;
-        case 0x12: cycles = LoadByte(&mainMemory[regDE.word], regAF.hi, reg);
+        case 0x12: cycles = LoadByte(&mainMemory[regDE.word], memory, regAF.hi, reg);
                    fprintf(output, OPRR, "LD", "(DE)", "A");
                    break;
-        case 0x22: cycles = LoadByte(&mainMemory[regHL.word++], regAF.hi, reg);
+        case 0x22: cycles = LoadByte(&mainMemory[regHL.word++], memory, regAF.hi, reg);
                    fprintf(output, OPRR, "LD", "(HL+)", "A");
                    break;
-        case 0x32: cycles = LoadByte(&mainMemory[regHL.word--], regAF.hi, reg);
+        case 0x32: cycles = LoadByte(&mainMemory[regHL.word--], memory, regAF.hi, reg);
                    fprintf(output, OPRR, "LD", "(HL-)", "A");
                    break;
-        case 0x0a: cycles = LoadByte(&regAF.hi, mainMemory[regBC.word], memory);
+        case 0x0a: cycles = LoadByte(&regAF.hi, reg, mainMemory[regBC.word], memory);
                    fprintf(output, OPRR, "LD", "A", "(BC)");
                    break;
-        case 0x1a: cycles = LoadByte(&regAF.hi, mainMemory[regDE.word], memory);
+        case 0x1a: cycles = LoadByte(&regAF.hi, reg, mainMemory[regDE.word], memory);
                    fprintf(output, OPRR, "LD", "A", "(DE)");
                    break;
-        case 0x2a: cycles = LoadByte(&regAF.hi, mainMemory[regHL.word++], memory);
+        case 0x2a: cycles = LoadByte(&regAF.hi, reg, mainMemory[regHL.word++], memory);
                    fprintf(output, OPRR, "LD", "A", "(HL+)");
                    break;
-        case 0x3a: cycles = LoadByte(&regAF.hi, mainMemory[regHL.word--], memory);
+        case 0x3a: cycles = LoadByte(&regAF.hi, reg, mainMemory[regHL.word--], memory);
                    fprintf(output, OPRR, "LD", "A", "(HL-)");
                    break;
 
@@ -123,21 +123,29 @@ short DecodeExecute(BYTE opcode, FILE *output)
                    break;                      
 
         // Load immediate byte into register
-        case 0x06: fprintf(output, OPRB, "LD", "B", Fetch(output));
+        case 0x06: cycles = LoadByte(&regBC.hi, reg, Fetch(output), immediate);
+                   fprintf(output, OPRB, "LD", "B", regBC.hi);
                    break;
-        case 0x0e: fprintf(output, OPRB, "LD", "C", Fetch(output));
+        case 0x0e: cycles = LoadByte(&regBC.lo, reg, Fetch(output), immediate);
+                   fprintf(output, OPRB, "LD", "C", regBC.lo);
                    break;           
-        case 0x16: fprintf(output, OPRB, "LD", "D", Fetch(output));
+        case 0x16: cycles = LoadByte(&regDE.hi, reg, Fetch(output), immediate);
+                   fprintf(output, OPRB, "LD", "D", regDE.hi);
                    break;
-        case 0x1e: fprintf(output, OPRB, "LD", "E", Fetch(output));
+        case 0x1e: cycles = LoadByte(&regDE.lo, reg, Fetch(output), immediate);
+                   fprintf(output, OPRB, "LD", "E", regDE.lo);
                    break;
-        case 0x26: fprintf(output, OPRB, "LD", "H", Fetch(output));
+        case 0x26: cycles = LoadByte(&regHL.hi, reg, Fetch(output), immediate);
+                   fprintf(output, OPRB, "LD", "H", regHL.hi);
                    break;
-        case 0x2e: fprintf(output, OPRB, "LD", "L", Fetch(output));
+        case 0x2e: cycles = LoadByte(&regHL.lo, reg, Fetch(output), immediate);
+                   fprintf(output, OPRB, "LD", "L", regHL.lo);
                    break;
-        case 0x36: fprintf(output, OPRB, "LD", "(HL)", Fetch(output));
+        case 0x36: cycles = LoadByte(&mainMemory[regHL.word], memory, Fetch(output), immediate);
+                   fprintf(output, OPRB, "LD", "(HL)", mainMemory[regHL.word]);
                    break;
-        case 0x3e: fprintf(output, OPRB, "LD", "A", Fetch(output));
+        case 0x3e: cycles = LoadByte(&regAF.hi, reg, Fetch(output), immediate);
+                   fprintf(output, OPRB, "LD", "A", regAF.hi);
                    break;                                                                                               
 
         // Decrement word
@@ -159,21 +167,21 @@ short DecodeExecute(BYTE opcode, FILE *output)
         // Jump relative to current PC
         case 0x18: fprintf(output, OPL, "JR", (S_BYTE)Fetch(output));
                    break;
-        case 0x28: offset = (S_BYTE)Fetch(output);
-                   cycles = JumpRelativeCond("Z", offset);
-                   fprintf(output, OPRL, "JR", "Z", offset);
+        case 0x28: byteOffset = Fetch(output);
+                   cycles = JumpRelativeCond("Z", (S_BYTE)byteOffset);
+                   fprintf(output, OPRL, "JR", "Z", (S_BYTE)byteOffset);
                    break;
-        case 0x38: offset = (S_BYTE)Fetch(output);
-                   cycles = JumpRelativeCond("C", offset);
-                   fprintf(output, OPRL, "JR", "C", offset);
+        case 0x38: byteOffset = Fetch(output);
+                   cycles = JumpRelativeCond("C", (S_BYTE)byteOffset);
+                   fprintf(output, OPRL, "JR", "C", (S_BYTE)byteOffset);
                    break;                   
-        case 0x20: offset = (S_BYTE)Fetch(output);
-                   cycles = JumpRelativeCond("NZ", offset);
-                   fprintf(output, OPRL, "JR", "NZ", offset);
+        case 0x20: byteOffset = Fetch(output);
+                   cycles = JumpRelativeCond("NZ", (S_BYTE)byteOffset);
+                   fprintf(output, OPRL, "JR", "NZ", (S_BYTE)byteOffset);
                    break;
-        case 0x30: offset = (S_BYTE)Fetch(output);
-                   cycles = JumpRelativeCond("NC", offset);
-                   fprintf(output, OPRL, "JR", "NC", offset);
+        case 0x30: byteOffset = Fetch(output);
+                   cycles = JumpRelativeCond("NC", (S_BYTE)byteOffset);
+                   fprintf(output, OPRL, "JR", "NC", (S_BYTE)byteOffset);
                    break;                                      
 
         // Load byte from register (or (HL)) into register B
