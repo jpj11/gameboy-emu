@@ -145,14 +145,20 @@ short LoadByte(BYTE *dest, enum operandType destType, BYTE src, enum operandType
     *dest = src;
 
     // Return the appropriate number of cycles
-    if( (destType == memory && srcType == reg) ||
-        (destType == reg && srcType == memory) ||
-        (destType == reg && srcType == immediate) )
+    if(destType == reg && srcType == reg)
+    {
+        return 4;
+    }
+    else if( (destType == memory && srcType == reg) ||
+             (destType == reg && srcType == memory) ||
+             (destType == reg && srcType == immediate) )
     {
         return 8;
     }
     else
+    {
         return 12;
+    }
 }
 
 short JumpRelativeCond(char *cond, S_BYTE offset)

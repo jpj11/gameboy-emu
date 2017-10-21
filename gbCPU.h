@@ -14,9 +14,6 @@ typedef short S_WORD;
 // CPU Constants
 #define REG_P1 0xFF00
 
-#define SRC_REG 0
-#define SRC_IMMEDIATE 1
-
 // Memory Constants
 #define GAME_PAK_SIZE 0x200000
 #define MAIN_MEM_SIZE 0x10000
