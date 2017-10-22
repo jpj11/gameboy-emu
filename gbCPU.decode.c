@@ -21,6 +21,7 @@ short DecodeExecute(BYTE opcode, FILE *output)
 {
     short cycles = -1;
     BYTE byteOffset = 0x00;
+    WORD address = 0x0000;
 
     switch(opcode)
     {
@@ -29,7 +30,7 @@ short DecodeExecute(BYTE opcode, FILE *output)
                    fprintf(output, OPRW, "LD", "BC", regBC.word);
                    break;
         case 0x11: cycles = LoadWord(&regDE.word, GetImmediateWord(output), immediate);
-                   fprintf(output, OPRW, "LD", "DE", regBC.word);
+                   fprintf(output, OPRW, "LD", "DE", regDE.word);
                    break;
         case 0x21: cycles = LoadWord(&regHL.word, GetImmediateWord(output), immediate);
                    fprintf(output, OPRW, "LD", "HL", regHL.word);
@@ -509,7 +510,9 @@ short DecodeExecute(BYTE opcode, FILE *output)
                    break;
 
         // Call subroutine at immediate word address
-        case 0xcd: fprintf(output, OPW, "CALL", GetImmediateWord(output));
+        case 0xcd: address = GetImmediateWord(output);
+                   cycles = Call(address);
+                   fprintf(output, OPW, "CALL", address);
                    break;
         case 0xcc: fprintf(output, OPRW, "CALL", "Z", GetImmediateWord(output));
                    break;
@@ -521,9 +524,13 @@ short DecodeExecute(BYTE opcode, FILE *output)
                    break;
 
         // Load / Store byte at register P1 (address 0xff00) + byte immediate into register A
-        case 0xe0: fprintf(output, OPBMR, "LDH", Fetch(output), "A");
+        case 0xe0: byteOffset = Fetch(output);
+                   cycles = LoadByte(&mainMemory[byteOffset + REG_P1], memory, regAF.hi, reg);
+                   fprintf(output, OPBMR, "LDH", byteOffset, "A");
                    break;
-        case 0xf0: fprintf(output, OPRBM, "LDH", "A", Fetch(output));
+        case 0xf0: byteOffset = Fetch(output);
+                   cycles = LoadByte(&regAF.hi, reg, mainMemory[byteOffset + REG_P1], memory);
+                   fprintf(output, OPRBM, "LDH", "A", Fetch(output));
                    break;
 
         // Load / Store byte at register P1 (address 0xff00) + C into register A

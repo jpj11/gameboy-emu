@@ -72,6 +72,7 @@ short LoadWord(WORD *dest, WORD src, enum operandType srcType);
 short LoadByte(BYTE *dest, enum operandType destType, BYTE src, enum operandType srcType);
 
 short JumpRelativeCond(char *cond, S_BYTE offset);
+short Call(WORD address);
 
 short IncrementWord(WORD *value);
 

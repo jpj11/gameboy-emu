@@ -177,6 +177,17 @@ short JumpRelativeCond(char *cond, S_BYTE offset)
     return 8;
 }
 
+short Call(WORD address)
+{
+    PC.word++;
+    mainMemory[SP.word--] = PC.hi;
+    mainMemory[SP.word--] = PC.lo;
+
+    PC.word = address;
+
+    return 24;
+}
+
 short IncrementWord(WORD *value)
 {
     // Increment word by 1
