@@ -481,13 +481,17 @@ short DecodeExecute(BYTE opcode, FILE *output)
                    break;                                      
 
         // Push word onto stack
-        case 0xc5: fprintf(output, OPR, "PUSH", "BC");
+        case 0xc5: cycles = Push(regBC.word);
+                   fprintf(output, OPR, "PUSH", "BC");
                    break;
-        case 0xd5: fprintf(output, OPR, "PUSH", "DE");
+        case 0xd5: cycles = Push(regDE.word);
+                   fprintf(output, OPR, "PUSH", "DE");
                    break;
-        case 0xe5: fprintf(output, OPR, "PUSH", "HL");
+        case 0xe5: cycles = Push(regHL.word);
+                   fprintf(output, OPR, "PUSH", "HL");
                    break;
-        case 0xf5: fprintf(output, OPR, "PUSH", "AF");
+        case 0xf5: cycles = Push(regAF.word);
+                   fprintf(output, OPR, "PUSH", "AF");
                    break;                                      
 
         // Return
@@ -562,21 +566,29 @@ short DecodeExecuteCB(BYTE opcode, FILE *output)
     switch (opcode)
     {
         // Rotate left through carry
-        case 0x10: fprintf(output, OPR, "RL", "B");
+        case 0x10: cycles = RotateLeft(&regBC.hi, reg);
+                   fprintf(output, OPR, "RL", "B");
                    break;
-        case 0x11: fprintf(output, OPR, "RL", "C");
+        case 0x11: cycles = RotateLeft(&regBC.lo, reg);
+                   fprintf(output, OPR, "RL", "C");
                    break;
-        case 0x12: fprintf(output, OPR, "RL", "D");
+        case 0x12: cycles = RotateLeft(&regDE.hi, reg);
+                   fprintf(output, OPR, "RL", "D");
                    break;
-        case 0x13: fprintf(output, OPR, "RL", "E");
+        case 0x13: cycles = RotateLeft(&regDE.lo, reg);
+                   fprintf(output, OPR, "RL", "E");
                    break;
-        case 0x14: fprintf(output, OPR, "RL", "H");
+        case 0x14: cycles = RotateLeft(&regHL.hi, reg);
+                   fprintf(output, OPR, "RL", "H");
                    break;
-        case 0x15: fprintf(output, OPR, "RL", "L");
+        case 0x15: cycles = RotateLeft(&regHL.lo, reg);
+                   fprintf(output, OPR, "RL", "L");
                    break;
-        case 0x16: fprintf(output, OPR, "RL", "(HL)");
+        case 0x16: cycles = RotateLeft(&mainMemory[regHL.word], memory);
+                   fprintf(output, OPR, "RL", "(HL)");
                    break;
-        case 0x17: fprintf(output, OPR, "RL", "A");
+        case 0x17: cycles = RotateLeft(&regAF.hi, reg);
+                   fprintf(output, OPR, "RL", "A");
                    break;                                                                                                                  
 
         // Test bit 0
@@ -787,7 +799,7 @@ short DecodeExecuteCB(BYTE opcode, FILE *output)
 				   fprintf(output, OPRR, "BIT", "7", "A");
                    break;                       
     }
-    
+
     // The 0xcb prefix itself requires 4 cycles to decode
     return cycles + 4;
 }

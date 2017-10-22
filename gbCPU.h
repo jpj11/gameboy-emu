@@ -82,6 +82,7 @@ WORD GetImmediateWord(FILE *output);
 // Memory instructions
 short LoadWord(WORD *dest, WORD src, enum operandType srcType);
 short LoadByte(BYTE *dest, enum operandType destType, BYTE src, enum operandType srcType);
+short Push(WORD value);
 
 // Control flow functions
 short JumpRelativeCond(enum cpuFlag flag, bool condition, S_BYTE offset);
@@ -96,5 +97,6 @@ short Xor(BYTE value, enum operandType valueType);
 
 // Bitwise instructions
 short Bit(short bit, BYTE *toTest);
+short RotateLeft(BYTE *value, enum operandType valueType);
 
 #endif

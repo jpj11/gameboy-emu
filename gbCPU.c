@@ -166,10 +166,25 @@ short LoadByte(BYTE *dest, enum operandType destType, BYTE src, enum operandType
     }
 }
 
+short Push(WORD value)
+{
+    // Calculate the hi and lo bytes of value
+    BYTE hi = value >> 8;
+    BYTE lo = value;
+
+    // Store value on the stack
+    mainMemory[SP.word--] = hi;
+    mainMemory[SP.word--] = lo;
+
+    return 12;
+}
+
 short JumpRelativeCond(enum cpuFlag flag, bool condition, S_BYTE offset)
 {
+    // Get the state of the flag
     bool flagSet = GetFlag(flag);
 
+    // If the flag state matches condition, jump
     if( (flagSet == true  && condition == true) ||
         (flagSet == false && condition == false) )
     {
@@ -182,10 +197,12 @@ short JumpRelativeCond(enum cpuFlag flag, bool condition, S_BYTE offset)
 
 short Call(WORD address)
 {
+    // Store the address of the next instruction on the stack
     PC.word++;
     mainMemory[SP.word--] = PC.hi;
     mainMemory[SP.word--] = PC.lo;
 
+    // Jump to address
     PC.word = address;
 
     return 24;
@@ -250,4 +267,27 @@ short Bit(short position, BYTE *toTest)
     SetFlag(halfCarry);
 
     return 8;
+}
+
+short RotateLeft(BYTE *value, enum operandType valueType)
+{
+    // Store the state of the carry flag
+    short bitZero = GetFlag(carry);
+
+    // Clear flags
+    regAF.lo = 0x00;
+
+    // Set the flag if most significant bit of value is 1
+    if(*value >> 7)
+        SetFlag(carry);
+
+    // Shift left and put old value of carry flag at bit 0
+    *value <<= 1;
+    *value |= bitZero;
+
+    // Return the appropriate number of cycles
+    if(valueType == reg)
+        return 8;
+    else
+        return 16;
 }
