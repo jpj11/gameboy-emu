@@ -24,6 +24,11 @@ BYTE *Write(BYTE *address)
     return NULL;
 }
 
+bool GetFlag(enum cpuFlag flag)
+{
+    return (regAF.lo >> flag) & 1;
+}
+
 void SetFlag(enum cpuFlag flag)
 {
     regAF.lo |= 1 << flag;
@@ -161,20 +166,18 @@ short LoadByte(BYTE *dest, enum operandType destType, BYTE src, enum operandType
     }
 }
 
-short JumpRelativeCond(char *cond, S_BYTE offset)
+short JumpRelativeCond(enum cpuFlag flag, bool condition, S_BYTE offset)
 {
-    short zFlag = (regAF.lo >> zero) & 1;
-    short cFlag = (regAF.lo >> carry) & 1;
+    bool flagSet = GetFlag(flag);
 
-    if( ((strcmp(cond, "Z" ) == 0) &&  zFlag) ||
-        ((strcmp(cond, "NZ") == 0) && !zFlag) ||
-        ((strcmp(cond, "C" ) == 0) &&  cFlag) ||
-        ((strcmp(cond, "NC") == 0) && !cFlag) )
+    if( (flagSet == true  && condition == true) ||
+        (flagSet == false && condition == false) )
     {
         PC.word += offset;
+        return 12;
     }
-
-    return 8;
+    else
+        return 8;
 }
 
 short Call(WORD address)

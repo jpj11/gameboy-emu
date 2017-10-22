@@ -169,19 +169,19 @@ short DecodeExecute(BYTE opcode, FILE *output)
         case 0x18: fprintf(output, OPL, "JR", (S_BYTE)Fetch(output));
                    break;
         case 0x28: byteOffset = Fetch(output);
-                   cycles = JumpRelativeCond("Z", (S_BYTE)byteOffset);
+                   cycles = JumpRelativeCond(zero, true, (S_BYTE)byteOffset);
                    fprintf(output, OPRL, "JR", "Z", (S_BYTE)byteOffset);
                    break;
         case 0x38: byteOffset = Fetch(output);
-                   cycles = JumpRelativeCond("C", (S_BYTE)byteOffset);
+                   cycles = JumpRelativeCond(carry, true, (S_BYTE)byteOffset);
                    fprintf(output, OPRL, "JR", "C", (S_BYTE)byteOffset);
                    break;                   
         case 0x20: byteOffset = Fetch(output);
-                   cycles = JumpRelativeCond("NZ", (S_BYTE)byteOffset);
+                   cycles = JumpRelativeCond(zero, false, (S_BYTE)byteOffset);
                    fprintf(output, OPRL, "JR", "NZ", (S_BYTE)byteOffset);
                    break;
         case 0x30: byteOffset = Fetch(output);
-                   cycles = JumpRelativeCond("NC", (S_BYTE)byteOffset);
+                   cycles = JumpRelativeCond(carry, false, (S_BYTE)byteOffset);
                    fprintf(output, OPRL, "JR", "NC", (S_BYTE)byteOffset);
                    break;                                      
 
@@ -445,7 +445,7 @@ short DecodeExecute(BYTE opcode, FILE *output)
         case 0xad: cycles = Xor(regHL.lo, reg);
                    fprintf(output, OPR, "XOR", "L");
                    break;
-        case 0xae: //cycles = Xor(regBC.hi, reg);
+        case 0xae: cycles = Xor(mainMemory[regHL.word], memory);
                    fprintf(output, OPR, "XOR", "(HL)");
                    break;
         case 0xaf: cycles = Xor(regAF.hi, reg);
@@ -788,5 +788,6 @@ short DecodeExecuteCB(BYTE opcode, FILE *output)
                    break;                       
     }
     
-    return cycles;
+    // The 0xcb prefix itself requires 4 cycles to decode
+    return cycles + 4;
 }
