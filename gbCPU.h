@@ -98,5 +98,6 @@ short Xor(BYTE value, enum operandType valueType);
 // Bitwise instructions
 short Bit(short bit, BYTE *toTest);
 short RotateLeft(BYTE *value, enum operandType valueType);
+short RotateLeftAccu();
 
 #endif

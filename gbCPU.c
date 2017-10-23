@@ -285,9 +285,31 @@ short RotateLeft(BYTE *value, enum operandType valueType)
     *value <<= 1;
     *value |= bitZero;
 
+    // Set zero flag if rotation resulted in zero
+    ModifyFlag(zero, *value);
+
     // Return the appropriate number of cycles
     if(valueType == reg)
         return 8;
     else
         return 16;
+}
+
+short RotateLeftAccu()
+{
+    // Store the state of the carry flag
+    short bitZero = GetFlag(carry);
+
+    // Clear flags
+    regAF.lo = 0x00;
+
+    // Set the flag if most significant bit of accumulator is 1
+    if(regAF.hi >> 7)
+        SetFlag(carry);
+
+    // Shift left and put old value of carry flag at bit 0
+    regAF.hi <<= 1;
+    regAF.hi |= bitZero;
+
+    return 4;
 }

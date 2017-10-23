@@ -160,7 +160,8 @@ short DecodeExecute(BYTE opcode, FILE *output)
                    break;                                                                                                                                                                     
 
         // Rotate register A left / right through carry flag
-        case 0x17: fprintf(output, OP, "RLA");
+        case 0x17: cycles = RotateLeftAccu();
+                   fprintf(output, OP, "RLA");
                    break;
         case 0x1F: fprintf(output, OP, "RRA");
                    break;
@@ -555,7 +556,6 @@ short DecodeExecute(BYTE opcode, FILE *output)
         case 0xfe: fprintf(output, OPB, "CP", Fetch(output));
                    break;
     }
-    
     return cycles;
 }
 
@@ -799,7 +799,5 @@ short DecodeExecuteCB(BYTE opcode, FILE *output)
 				   fprintf(output, OPRR, "BIT", "7", "A");
                    break;                       
     }
-
-    // The 0xcb prefix itself requires 4 cycles to decode
-    return cycles + 4;
+    return cycles;
 }
