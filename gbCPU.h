@@ -70,9 +70,6 @@ enum cpuFlag
     carry = 4
 };
 
-// int IsRegister(WORD *address);
-BYTE *Write(BYTE *address);
-
 // Functions that represent the primary phases of execution (and helper functions)
 void InitSystem();
 BYTE Fetch(FILE *output);

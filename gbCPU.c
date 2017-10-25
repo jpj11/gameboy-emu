@@ -2,28 +2,6 @@
 #include <string.h>
 #include "gbCPU.h"
 
-// int IsRegister(WORD *address)
-// {
-//     if( (&(*address) == &regAF.word) ||
-//         (&(*address) == &regBC.word) ||
-//         (&(*address) == &regDE.word) ||
-//         (&(*address) == &regHL.word) ||
-//         (&(*address) ==    &SP.word) ||
-//         (&(*address) ==    &PC.word) )
-//     {
-//         return 1;
-//     }
-//     else
-//     {
-//         return -1;
-//     }
-// }
-
-BYTE *Write(BYTE *address)
-{
-    return NULL;
-}
-
 bool GetFlag(enum cpuFlag flag)
 {
     return (regAF.lo >> flag) & 1;
@@ -39,7 +17,7 @@ void UnsetFlag(enum cpuFlag flag)
     regAF.lo &= ~(1 << flag);
 }
 
-void ModifyFlag(enum cpuFlag flag, BYTE value)
+void ModifyFlag(enum cpuFlag flag, WORD value)
 {
     switch (flag)
     {
