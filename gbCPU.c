@@ -82,8 +82,8 @@ short Push(WORD value)
 short Pop(WORD *dest)
 {
     // Retrieve value off of stack
-    BYTE lo = mainMemory[SP.word++];
-    *dest = mainMemory[SP.word++];
+    BYTE lo = mainMemory[++SP.word];
+    *dest = mainMemory[++SP.word];
 
     // Form WORD dest from hi and lo BYTEs
     *dest <<= 8;
@@ -120,7 +120,6 @@ short JumpRelativeCond(enum cpuFlag flag, bool condition, S_BYTE offset)
 short Call(WORD address)
 {
     // Store the address of the next instruction on the stack
-    PC.word++;
     mainMemory[SP.word--] = PC.hi;
     mainMemory[SP.word--] = PC.lo;
 
@@ -128,6 +127,15 @@ short Call(WORD address)
     PC.word = address;
 
     return 24;
+}
+
+short Return()
+{
+    // Load return address from stack into PC
+    PC.lo = mainMemory[++SP.word];
+    PC.hi = mainMemory[++SP.word];
+
+    return 16;
 }
 
 short IncrementWord(WORD *value)
@@ -164,6 +172,24 @@ short Xor(BYTE value, enum operandType valueType)
 
     // Set and unset flags as necessary
     regAF.hi == 0x00 ? SetFlag(zero) : UnsetFlag(zero);
+
+    // Return the appropriate number of cycles
+    if(valueType == reg)
+        return 4;
+    else
+        return 8;
+}
+
+short Compare(BYTE value, enum operandType valueType)
+{
+    // Calculate the comparison
+    BYTE result = regAF.hi - value;
+
+    // Set flags based on result
+    result == 0x00 ? SetFlag(zero) : UnsetFlag(zero);
+    SetFlag(subtract);
+    (regAF.hi & 0x0f) < (value & 0x0f) ? SetFlag(halfCarry) : UnsetFlag(halfCarry);
+    regAF.hi < value ? SetFlag(carry) : UnsetFlag(carry);
 
     // Return the appropriate number of cycles
     if(valueType == reg)

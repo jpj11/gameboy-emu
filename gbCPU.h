@@ -87,6 +87,7 @@ short Pop(WORD *dest);
 // Control flow functions
 short JumpRelativeCond(enum cpuFlag flag, bool condition, S_BYTE offset);
 short Call(WORD address);
+short Return();
 
 // Word arithmetic instructions
 short IncrementWord(WORD *value);
@@ -95,6 +96,7 @@ short IncrementWord(WORD *value);
 short IncrementByte(BYTE *value, enum operandType valueType);
 short DecrementByte(BYTE *value, enum operandType valueType);
 short Xor(BYTE value, enum operandType valueType);
+short Compare(BYTE value, enum operandType valueType);
 
 // Bitwise instructions
 short Bit(short bit, BYTE *toTest, enum operandType toTestType);

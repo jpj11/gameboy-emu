@@ -20,7 +20,7 @@ short DecodeExecuteCB(BYTE opcode, FILE *output);
 short DecodeExecute(BYTE opcode, FILE *output)
 {
     short cycles = -1;
-    BYTE byteOffset = 0x00;
+    BYTE byteImmediate = 0x00;
     WORD address = 0x0000;
 
     switch(opcode)
@@ -177,21 +177,21 @@ short DecodeExecute(BYTE opcode, FILE *output)
         // Jump relative to current PC
         case 0x18: fprintf(output, OPL, "JR", (S_BYTE)Fetch(output));
                    break;
-        case 0x28: byteOffset = Fetch(output);
-                   cycles = JumpRelativeCond(zero, true, (S_BYTE)byteOffset);
-                   fprintf(output, OPRL, "JR", "Z", (S_BYTE)byteOffset);
+        case 0x28: byteImmediate = Fetch(output);
+                   cycles = JumpRelativeCond(zero, true, (S_BYTE)byteImmediate);
+                   fprintf(output, OPRL, "JR", "Z", (S_BYTE)byteImmediate);
                    break;
-        case 0x38: byteOffset = Fetch(output);
-                   cycles = JumpRelativeCond(carry, true, (S_BYTE)byteOffset);
-                   fprintf(output, OPRL, "JR", "C", (S_BYTE)byteOffset);
+        case 0x38: byteImmediate = Fetch(output);
+                   cycles = JumpRelativeCond(carry, true, (S_BYTE)byteImmediate);
+                   fprintf(output, OPRL, "JR", "C", (S_BYTE)byteImmediate);
                    break;                   
-        case 0x20: byteOffset = Fetch(output);
-                   cycles = JumpRelativeCond(zero, false, (S_BYTE)byteOffset);
-                   fprintf(output, OPRL, "JR", "NZ", (S_BYTE)byteOffset);
+        case 0x20: byteImmediate = Fetch(output);
+                   cycles = JumpRelativeCond(zero, false, (S_BYTE)byteImmediate);
+                   fprintf(output, OPRL, "JR", "NZ", (S_BYTE)byteImmediate);
                    break;
-        case 0x30: byteOffset = Fetch(output);
-                   cycles = JumpRelativeCond(carry, false, (S_BYTE)byteOffset);
-                   fprintf(output, OPRL, "JR", "NC", (S_BYTE)byteOffset);
+        case 0x30: byteImmediate = Fetch(output);
+                   cycles = JumpRelativeCond(carry, false, (S_BYTE)byteImmediate);
+                   fprintf(output, OPRL, "JR", "NC", (S_BYTE)byteImmediate);
                    break;                                      
 
         // Load byte from register (or (HL)) into register B
@@ -508,7 +508,8 @@ short DecodeExecute(BYTE opcode, FILE *output)
                    break;                                      
 
         // Return
-        case 0xc9: fprintf(output, OP, "RET");
+        case 0xc9: cycles = Return();
+                   fprintf(output, OP, "RET");
                    break;
         case 0xd9: fprintf(output, OP, "RETI");
                    break;
@@ -541,12 +542,12 @@ short DecodeExecute(BYTE opcode, FILE *output)
                    break;
 
         // Load / Store byte at register P1 (address 0xff00) + byte immediate into register A
-        case 0xe0: byteOffset = Fetch(output);
-                   cycles = LoadByte(&mainMemory[byteOffset + REG_P1], immediateOffset, regAF.hi, reg);
-                   fprintf(output, OPBMR, "LDH", byteOffset, "A");
+        case 0xe0: byteImmediate = Fetch(output);
+                   cycles = LoadByte(&mainMemory[byteImmediate + REG_P1], immediateOffset, regAF.hi, reg);
+                   fprintf(output, OPBMR, "LDH", byteImmediate, "A");
                    break;
-        case 0xf0: byteOffset = Fetch(output);
-                   cycles = LoadByte(&regAF.hi, reg, mainMemory[byteOffset + REG_P1], immediateOffset);
+        case 0xf0: byteImmediate = Fetch(output);
+                   cycles = LoadByte(&regAF.hi, reg, mainMemory[byteImmediate + REG_P1], immediateOffset);
                    fprintf(output, OPRBM, "LDH", "A", Fetch(output));
                    break;
 
@@ -565,7 +566,9 @@ short DecodeExecute(BYTE opcode, FILE *output)
                    break;
 
         // Compare immediate byte with register A (and set appropriate flags)
-        case 0xfe: fprintf(output, OPB, "CP", Fetch(output));
+        case 0xfe: byteImmediate = Fetch(output);
+                   cycles = Compare(byteImmediate, immediate);
+                   fprintf(output, OPB, "CP", byteImmediate);
                    break;
     }
     return cycles;
