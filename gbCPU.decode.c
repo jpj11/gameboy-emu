@@ -106,21 +106,29 @@ short DecodeExecute(BYTE opcode, FILE *output)
                    break;
 
         // Decrement byte
-        case 0x05: fprintf(output, OPR, "DEC", "B");
+        case 0x05: cycles = DecrementByte(&regBC.hi, reg);
+				   fprintf(output, OPR, "DEC", "B");
                    break;
-        case 0x0d: fprintf(output, OPR, "DEC", "C");
+        case 0x0d: cycles = DecrementByte(&regBC.lo, reg);
+				   fprintf(output, OPR, "DEC", "C");
                    break;
-        case 0x15: fprintf(output, OPR, "DEC", "D");
+        case 0x15: cycles = DecrementByte(&regDE.hi, reg);
+				   fprintf(output, OPR, "DEC", "D");
                    break;
-        case 0x1d: fprintf(output, OPR, "DEC", "E");
+        case 0x1d: cycles = DecrementByte(&regDE.lo, reg);
+				   fprintf(output, OPR, "DEC", "E");
                    break;
-        case 0x25: fprintf(output, OPR, "DEC", "H");
+        case 0x25: cycles = DecrementByte(&regHL.hi, reg);
+				   fprintf(output, OPR, "DEC", "H");
                    break;
-        case 0x2d: fprintf(output, OPR, "DEC", "L");
+        case 0x2d: cycles = DecrementByte(&regHL.lo, reg);
+				   fprintf(output, OPR, "DEC", "L");
                    break;
-        case 0x35: fprintf(output, OPR, "DEC", "(HL)");
+        case 0x35: cycles = DecrementByte(&mainMemory[regHL.word], memory);
+                   fprintf(output, OPR, "DEC", "(HL)");
                    break;
-        case 0x3d: fprintf(output, OPR, "DEC", "A");
+        case 0x3d: cycles = DecrementByte(&regAF.hi, reg);
+				   fprintf(output, OPR, "DEC", "A");
                    break;                      
 
         // Load immediate byte into register

@@ -93,6 +93,7 @@ short IncrementWord(WORD *value);
 
 // Byte arithmetic instructions
 short IncrementByte(BYTE *value, enum operandType valueType);
+short DecrementByte(BYTE *value, enum operandType valueType);
 short Xor(BYTE value, enum operandType valueType);
 
 // Bitwise instructions

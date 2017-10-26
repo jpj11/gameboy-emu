@@ -49,6 +49,11 @@ int main(int argc, char **argv)
     }
     fread(&mainMemory[0x0000], 0x0100, 1, dmg);
 
+    for(int i = 0; i < 48; i++)
+    {
+        mainMemory[0x0104+i] = mainMemory[0x00A8+i];
+    }
+
     SDL_Window *window = NULL;
 
     // Initialize SDL

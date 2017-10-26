@@ -17,37 +17,6 @@ void UnsetFlag(enum cpuFlag flag)
     regAF.lo &= ~(1 << flag);
 }
 
-void ModifyFlag(enum cpuFlag flag, WORD value)
-{
-    switch (flag)
-    {
-        case zero:
-            if(value == 0)
-                SetFlag(zero);
-            else
-                UnsetFlag(zero);
-            break;
-
-        case subtract: break;
-
-        case halfCarry:
-            if(value > 0xF)
-                SetFlag(halfCarry);
-            else
-                UnsetFlag(halfCarry);
-            break;
-
-        case carry:
-            if(value > 0x00FF)
-                SetFlag(carry);
-            else
-                UnsetFlag(carry);
-            break;
-
-        default: break;
-    }
-}
-
 // Fetch the next opcode to be executed
 BYTE Fetch(FILE *output)
 {
@@ -112,17 +81,20 @@ short Push(WORD value)
 
 short Pop(WORD *dest)
 {
+    // Retrieve value off of stack
     BYTE lo = mainMemory[SP.word++];
     *dest = mainMemory[SP.word++];
 
+    // Form WORD dest from hi and lo BYTEs
     *dest <<= 8;
     *dest |= lo;
 
+    // If dest is regsiter AF, then set and unset flags as necessary
     if (dest == &regAF.word)
     {
-        ModifyFlag(zero, *dest);
+        *dest == 0x0000 ? SetFlag(zero) : UnsetFlag(zero);
         UnsetFlag(subtract);
-        ModifyFlag(halfCarry, *dest);
+        *dest > 0x000f ? SetFlag(halfCarry) : UnsetFlag(halfCarry);
         UnsetFlag(carry);
     }
 
@@ -170,14 +142,10 @@ short IncrementByte(BYTE *value, enum operandType valueType)
     // Increment byte
     *value = *value + 1;
 
-    // Set zero flag if the operation resulted in zero, otherwise unset
-    ModifyFlag(zero, *value);
-
-    // Unset subtract flag
+    // Set and unset flags as necessary
+    *value == 0x00 ? SetFlag(zero) : UnsetFlag(zero);
     UnsetFlag(subtract);
-
-    // Set half carry flag if the operation resulted in a half carry
-    ModifyFlag(halfCarry, *value);
+    *value > 0x0f ? SetFlag(halfCarry) : UnsetFlag(halfCarry);
 
     // Return the appropriate number of cycles
     if(valueType == reg)
@@ -194,8 +162,8 @@ short Xor(BYTE value, enum operandType valueType)
     // Unset all flags
     regAF.lo = 0x00;
 
-    // Set zero flag if the operation resulted in zero, otherwise unset
-    ModifyFlag(zero, regAF.hi);
+    // Set and unset flags as necessary
+    regAF.hi == 0x00 ? SetFlag(zero) : UnsetFlag(zero);
 
     // Return the appropriate number of cycles
     if(valueType == reg)
@@ -204,18 +172,34 @@ short Xor(BYTE value, enum operandType valueType)
         return 8;
 }
 
+short DecrementByte(BYTE *value, enum operandType valueType)
+{
+    // Decrement byte
+    *value = *value - 1;
+
+    // Set and unset flags as necessary
+    *value == 0x00 ? SetFlag(zero) : UnsetFlag(zero);
+    SetFlag(subtract);
+    *value > 0x0f ? SetFlag(halfCarry) : UnsetFlag(halfCarry);
+
+    // Return the appropriate number of cycles
+    if(valueType == reg)
+        return 4;
+    else
+        return 12;
+}
+
 short Bit(short position, BYTE *toTest, enum operandType toTestType)
 {
     // Find the value of the bit at position in toTest
     short value = (*toTest >> position) & 1;
 
-    // Set zero flag if value is zero, otherwise unset
-    ModifyFlag(zero, value);
-
-    // Set and unset other flags as necessary
+    // Set and unset flags as necessary
+    value == 0 ? SetFlag(zero) : UnsetFlag(zero);
     UnsetFlag(subtract);
     SetFlag(halfCarry);
 
+    // Return appropriate number of cycles
     if (toTestType == reg)
         return 8;
     else
@@ -239,7 +223,7 @@ short RotateLeft(BYTE *value, enum operandType valueType)
     *value |= bitZero;
 
     // Set zero flag if rotation resulted in zero
-    ModifyFlag(zero, *value);
+    *value == 0x00 ? SetFlag(zero) : UnsetFlag(zero);
 
     // Return the appropriate number of cycles
     if(valueType == reg)
