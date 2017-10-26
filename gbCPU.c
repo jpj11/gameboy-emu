@@ -22,7 +22,7 @@ void ModifyFlag(enum cpuFlag flag, WORD value)
     switch (flag)
     {
         case zero:
-            if(value == 0x00)
+            if(value == 0)
                 SetFlag(zero);
             else
                 UnsetFlag(zero);
@@ -38,7 +38,7 @@ void ModifyFlag(enum cpuFlag flag, WORD value)
             break;
 
         case carry:
-            if(value > 0xFF)
+            if(value > 0x00FF)
                 SetFlag(carry);
             else
                 UnsetFlag(carry);
@@ -46,53 +46,6 @@ void ModifyFlag(enum cpuFlag flag, WORD value)
 
         default: break;
     }
-}
-
-// (http://bgb.bircd.org/pandocs.htm#powerupsequence)
-void InitSystem()
-{
-    // Initialize registers
-    regAF.word = 0x01B0;
-    regBC.word = 0x0013;
-    regDE.word = 0x00D8;
-    regHL.word = 0x014D;
-
-    // Initialize program counter and stack pointer
-    PC.word = 0x0100;
-    SP.word = 0xFFFE;
-
-    // Initialize RAM (I/0 Special Registers)
-    mainMemory[0xFF05] = 0x00;  // TIMA
-    mainMemory[0xFF06] = 0x00;  // TMA
-    mainMemory[0xFF07] = 0x00;  // TAC
-    mainMemory[0xFF10] = 0x80;  // NR10
-    mainMemory[0xFF11] = 0xBF;  // NR11
-    mainMemory[0xFF12] = 0xF3;  // NR12
-    mainMemory[0xFF14] = 0xBF;  // NR14
-    mainMemory[0xFF16] = 0x3F;  // NR21
-    mainMemory[0xFF17] = 0x00;  // NR22
-    mainMemory[0xFF19] = 0xBF;  // NR24
-    mainMemory[0xFF1A] = 0x7F;  // NR30
-    mainMemory[0xFF1B] = 0xFF;  // NR31
-    mainMemory[0xFF1C] = 0x9F;  // NR32
-    mainMemory[0xFF1E] = 0xBF;  // NR33
-    mainMemory[0xFF20] = 0xFF;  // NR41
-    mainMemory[0xFF21] = 0x00;  // NR42
-    mainMemory[0xFF22] = 0x00;  // NR43
-    mainMemory[0xFF23] = 0xBF;  // NR30
-    mainMemory[0xFF24] = 0x77;  // NR50
-    mainMemory[0xFF25] = 0xF3;  // NR51
-    mainMemory[0xFF26] = 0xF1;  // NR52
-    mainMemory[0xFF40] = 0x91;  // LCDC
-    mainMemory[0xFF42] = 0x00;  // SCY
-    mainMemory[0xFF43] = 0x00;  // SCX
-    mainMemory[0xFF45] = 0x00;  // LYC
-    mainMemory[0xFF47] = 0xFC;  // BGP
-    mainMemory[0xFF48] = 0xFF;  // OBP0
-    mainMemory[0xFF49] = 0xFF;  // OBP1
-    mainMemory[0xFF4A] = 0x00;  // WY
-    mainMemory[0xFF4B] = 0x00;  // WX
-    mainMemory[0xFFFF] = 0x00;  // IE
 }
 
 // Fetch the next opcode to be executed
@@ -110,6 +63,28 @@ WORD GetImmediateWord(FILE *output)
     return val;
 }
 
+short LoadByte(BYTE *dest, enum operandType destType, BYTE src, enum operandType srcType)
+{
+    // Load source into destination
+    *dest = src;
+
+    // Return the appropriate number of cycles
+    if(destType == reg && srcType == reg)
+        return 4;
+
+    else if((destType == memory && srcType == immediate) ||
+            (destType == reg && srcType == immediateOffset) ||
+            (destType == immediateOffset && srcType == reg))
+        return 12;
+
+    else if((destType == reg && srcType == memAtImmediate) ||
+            (destType == memAtImmediate && srcType == reg))
+        return 16;
+
+    else
+        return 8;
+}
+
 short LoadWord(WORD *dest, WORD src, enum operandType srcType)
 {
     // Load source into destination
@@ -122,28 +97,6 @@ short LoadWord(WORD *dest, WORD src, enum operandType srcType)
         return 12;
 }
 
-short LoadByte(BYTE *dest, enum operandType destType, BYTE src, enum operandType srcType)
-{
-    // Load source into destination
-    *dest = src;
-
-    // Return the appropriate number of cycles
-    if(destType == reg && srcType == reg)
-    {
-        return 4;
-    }
-    else if( (destType == memory && srcType == reg) ||
-             (destType == reg && srcType == memory) ||
-             (destType == reg && srcType == immediate) )
-    {
-        return 8;
-    }
-    else
-    {
-        return 12;
-    }
-}
-
 short Push(WORD value)
 {
     // Calculate the hi and lo bytes of value
@@ -154,17 +107,36 @@ short Push(WORD value)
     mainMemory[SP.word--] = hi;
     mainMemory[SP.word--] = lo;
 
+    return 16;
+}
+
+short Pop(WORD *dest)
+{
+    BYTE lo = mainMemory[SP.word++];
+    *dest = mainMemory[SP.word++];
+
+    *dest <<= 8;
+    *dest |= lo;
+
+    if (dest == &regAF.word)
+    {
+        ModifyFlag(zero, *dest);
+        UnsetFlag(subtract);
+        ModifyFlag(halfCarry, *dest);
+        UnsetFlag(carry);
+    }
+
     return 12;
 }
 
 short JumpRelativeCond(enum cpuFlag flag, bool condition, S_BYTE offset)
 {
     // Get the state of the flag
-    bool flagSet = GetFlag(flag);
+    bool flagIsSet = GetFlag(flag);
 
     // If the flag state matches condition, jump
-    if( (flagSet == true  && condition == true) ||
-        (flagSet == false && condition == false) )
+    if( (flagIsSet == true  && condition == true) ||
+        (flagIsSet == false && condition == false) )
     {
         PC.word += offset;
         return 12;
@@ -232,7 +204,7 @@ short Xor(BYTE value, enum operandType valueType)
         return 8;
 }
 
-short Bit(short position, BYTE *toTest)
+short Bit(short position, BYTE *toTest, enum operandType toTestType)
 {
     // Find the value of the bit at position in toTest
     short value = (*toTest >> position) & 1;
@@ -244,7 +216,10 @@ short Bit(short position, BYTE *toTest)
     UnsetFlag(subtract);
     SetFlag(halfCarry);
 
-    return 8;
+    if (toTestType == reg)
+        return 8;
+    else
+        return 12;
 }
 
 short RotateLeft(BYTE *value, enum operandType valueType)

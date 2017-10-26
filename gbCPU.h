@@ -8,8 +8,8 @@ typedef short S_WORD;
 
 typedef enum
 {
-    false = 0,
-    true = 1
+    false,
+    true
 } bool;
 
 // Graphics constants
@@ -58,7 +58,10 @@ enum operandType
 {
     reg,
     immediate,
-    memory
+    memory,
+    regOffset,
+    immediateOffset,
+    memAtImmediate
 };
 
 // Flags in the most significant bits of register F
@@ -71,15 +74,15 @@ enum cpuFlag
 };
 
 // Functions that represent the primary phases of execution (and helper functions)
-void InitSystem();
 BYTE Fetch(FILE *output);
 short DecodeExecute(BYTE opcode, FILE *output);
 WORD GetImmediateWord(FILE *output);
 
-// Memory instructions
-short LoadWord(WORD *dest, WORD src, enum operandType srcType);
+// Load instructions
 short LoadByte(BYTE *dest, enum operandType destType, BYTE src, enum operandType srcType);
+short LoadWord(WORD *dest, WORD src, enum operandType srcType);
 short Push(WORD value);
+short Pop(WORD *dest);
 
 // Control flow functions
 short JumpRelativeCond(enum cpuFlag flag, bool condition, S_BYTE offset);
@@ -93,7 +96,7 @@ short IncrementByte(BYTE *value, enum operandType valueType);
 short Xor(BYTE value, enum operandType valueType);
 
 // Bitwise instructions
-short Bit(short bit, BYTE *toTest);
+short Bit(short bit, BYTE *toTest, enum operandType toTestType);
 short RotateLeft(BYTE *value, enum operandType valueType);
 short RotateLeftAccu();
 
