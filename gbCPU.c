@@ -2,6 +2,26 @@
 #include <string.h>
 #include "gbCPU.h"
 
+
+// ================= Primary Execution / Helper Functions ================= //
+
+// Fetch the next BYTE from memory at PC
+BYTE FetchByte(FILE *output)
+{
+    BYTE val = mainMemory[PC.word++];
+    fprintf(output, "%0#4x --> ", val);
+    return val;
+}
+
+// Fetch the next WORD from memory at PC
+WORD FetchWord(FILE *output)
+{
+    WORD val = FetchByte(output);
+    val |= FetchByte(output) << 8;
+    return val;
+}
+
+// Functions to get, set, and unset cpuFlags
 bool GetFlag(enum cpuFlag flag)
 {
     return (regAF.lo >> flag) & 1;
@@ -17,21 +37,10 @@ void UnsetFlag(enum cpuFlag flag)
     regAF.lo &= ~(1 << flag);
 }
 
-// Fetch the next opcode to be executed
-BYTE Fetch(FILE *output)
-{
-    BYTE val = mainMemory[PC.word++];
-    fprintf(output, "%0#4x --> ", val);
-    return val;
-}
 
-WORD GetImmediateWord(FILE *output)
-{
-    WORD val = Fetch(output);
-    val |= Fetch(output) << 8;
-    return val;
-}
+// ========================== Load Instructions =========================== //
 
+// Load BYTE from src into address dest
 short LoadByte(BYTE *dest, enum operandType destType, BYTE src, enum operandType srcType)
 {
     // Load source into destination
@@ -54,6 +63,7 @@ short LoadByte(BYTE *dest, enum operandType destType, BYTE src, enum operandType
         return 8;
 }
 
+// Load WORD from src into address dest
 short LoadWord(WORD *dest, WORD src, enum operandType srcType)
 {
     // Load source into destination
@@ -66,6 +76,7 @@ short LoadWord(WORD *dest, WORD src, enum operandType srcType)
         return 12;
 }
 
+// Push WORD value onto the stack
 short Push(WORD value)
 {
     // Calculate the hi and lo bytes of value
@@ -79,6 +90,7 @@ short Push(WORD value)
     return 16;
 }
 
+// Pop WORD of off stack into address dest
 short Pop(WORD *dest)
 {
     // Retrieve value off of stack
@@ -101,67 +113,10 @@ short Pop(WORD *dest)
     return 12;
 }
 
-short JumpRelativeCond(enum cpuFlag flag, bool condition, S_BYTE offset)
-{
-    // Get the state of the flag
-    bool flagIsSet = GetFlag(flag);
 
-    // If the flag state matches condition, jump
-    if( (flagIsSet == true  && condition == true) ||
-        (flagIsSet == false && condition == false) )
-    {
-        PC.word += offset;
-        return 12;
-    }
-    else
-        return 8;
-}
+// ===================== Byte Arithmetic Instructions ===================== //
 
-short Call(WORD address)
-{
-    // Store the address of the next instruction on the stack
-    mainMemory[SP.word--] = PC.hi;
-    mainMemory[SP.word--] = PC.lo;
-
-    // Jump to address
-    PC.word = address;
-
-    return 24;
-}
-
-short Return()
-{
-    // Load return address from stack into PC
-    PC.lo = mainMemory[++SP.word];
-    PC.hi = mainMemory[++SP.word];
-
-    return 16;
-}
-
-short IncrementWord(WORD *value)
-{
-    // Increment word by 1
-    *value = *value + 1;
-    return 8;
-}
-
-short IncrementByte(BYTE *value, enum operandType valueType)
-{
-    // Increment byte
-    *value = *value + 1;
-
-    // Set and unset flags as necessary
-    *value == 0x00 ? SetFlag(zero) : UnsetFlag(zero);
-    UnsetFlag(subtract);
-    *value > 0x0f ? SetFlag(halfCarry) : UnsetFlag(halfCarry);
-
-    // Return the appropriate number of cycles
-    if(valueType == reg)
-        return 4;
-    else
-        return 12;
-}
-
+// Subtract BYTE value from register A and store difference in A
 short Subtract(BYTE value, enum operandType valueType)
 {
     // Set flags based on operands
@@ -182,6 +137,7 @@ short Subtract(BYTE value, enum operandType valueType)
         return 8;
 }
 
+// Xor BYTE value with register A and store result in A
 short Xor(BYTE value, enum operandType valueType)
 {
     // Xor register A with value and store result in register A
@@ -200,6 +156,7 @@ short Xor(BYTE value, enum operandType valueType)
         return 8;
 }
 
+// Compare BYTE value with register A and set flags based on result
 short Compare(BYTE value, enum operandType valueType)
 {
     // Set flags based on operands
@@ -220,6 +177,25 @@ short Compare(BYTE value, enum operandType valueType)
         return 8;
 }
 
+// Increment the BYTE at address value
+short IncrementByte(BYTE *value, enum operandType valueType)
+{
+    // Increment byte
+    *value = *value + 1;
+
+    // Set and unset flags as necessary
+    *value == 0x00 ? SetFlag(zero) : UnsetFlag(zero);
+    UnsetFlag(subtract);
+    *value > 0x0f ? SetFlag(halfCarry) : UnsetFlag(halfCarry);
+
+    // Return the appropriate number of cycles
+    if(valueType == reg)
+        return 4;
+    else
+        return 12;
+}
+
+// Decrement the BYTE at address value
 short DecrementByte(BYTE *value, enum operandType valueType)
 {
     // Set flags based on operands
@@ -240,23 +216,41 @@ short DecrementByte(BYTE *value, enum operandType valueType)
         return 12;
 }
 
-short Bit(short position, BYTE *toTest, enum operandType toTestType)
+
+// ===================== Word Arithmetic Instructions ===================== //
+
+// Increment WORD at address value
+short IncrementWord(WORD *value)
 {
-    // Find the value of the bit at position in toTest
-    short value = (*toTest >> position) & 1;
-
-    // Set and unset flags as necessary
-    value == 0 ? SetFlag(zero) : UnsetFlag(zero);
-    UnsetFlag(subtract);
-    SetFlag(halfCarry);
-
-    // Return appropriate number of cycles
-    if (toTestType == reg)
-        return 8;
-    else
-        return 12;
+    // Increment word by 1
+    *value = *value + 1;
+    return 8;
 }
 
+
+// ==================== Rotate and Shift Instructions ===================== //
+
+// Rotate the bits of register A left through the carry flag
+short RotateLeftAccu()
+{
+    // Store the state of the carry flag
+    short bitZero = GetFlag(carry);
+
+    // Clear flags
+    regAF.lo = 0x00;
+
+    // Set the flag if most significant bit of accumulator is 1
+    if(regAF.hi >> 7)
+        SetFlag(carry);
+
+    // Shift left and put old value of carry flag at bit 0
+    regAF.hi <<= 1;
+    regAF.hi |= bitZero;
+
+    return 4;
+}
+
+// Rotate the bits of the BYTE at address value left through the carry flag
 short RotateLeft(BYTE *value, enum operandType valueType)
 {
     // Store the state of the carry flag
@@ -283,21 +277,66 @@ short RotateLeft(BYTE *value, enum operandType valueType)
         return 16;
 }
 
-short RotateLeftAccu()
+
+// ========================= Bitwise Instructions ========================= //
+
+// Test the bit at position position of the BYTE at address toTest
+short Bit(short position, BYTE *toTest, enum operandType toTestType)
 {
-    // Store the state of the carry flag
-    short bitZero = GetFlag(carry);
+    // Find the value of the bit at position in toTest
+    short value = (*toTest >> position) & 1;
 
-    // Clear flags
-    regAF.lo = 0x00;
+    // Set and unset flags as necessary
+    value == 0 ? SetFlag(zero) : UnsetFlag(zero);
+    UnsetFlag(subtract);
+    SetFlag(halfCarry);
 
-    // Set the flag if most significant bit of accumulator is 1
-    if(regAF.hi >> 7)
-        SetFlag(carry);
+    // Return appropriate number of cycles
+    if (toTestType == reg)
+        return 8;
+    else
+        return 12;
+}
 
-    // Shift left and put old value of carry flag at bit 0
-    regAF.hi <<= 1;
-    regAF.hi |= bitZero;
 
-    return 4;
+// =========================== Jump Instructions ========================== //
+
+// Jump to PC + offset if the flag and condition match
+short JumpRelativeCond(enum cpuFlag flag, bool condition, S_BYTE offset)
+{
+    // Get the state of the flag
+    bool flagIsSet = GetFlag(flag);
+
+    // If the flag state matches condition, jump
+    if( (flagIsSet == true  && condition == true) ||
+        (flagIsSet == false && condition == false) )
+    {
+        PC.word += offset;
+        return 12;
+    }
+    else
+        return 8;
+}
+
+// Push return address on stack and jump to address
+short Call(WORD address)
+{
+    // Store the address of the next instruction on the stack
+    mainMemory[SP.word--] = PC.hi;
+    mainMemory[SP.word--] = PC.lo;
+
+    // Jump to address
+    PC.word = address;
+
+    return 24;
+}
+
+// Set PC to address popped off of stack
+short Return()
+{
+    // Load return address from stack into PC
+    PC.lo = mainMemory[++SP.word];
+    PC.hi = mainMemory[++SP.word];
+
+    return 16;
 }

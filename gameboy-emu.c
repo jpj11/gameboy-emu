@@ -91,7 +91,7 @@ int main(int argc, char **argv)
     PC.word = 0x0000;
     while(PC.word < 0x0100)
     {
-        opcode = Fetch(stdout);
+        opcode = FetchByte(stdout);
 
         cycles = DecodeExecute(opcode, stdout);
 
@@ -116,7 +116,7 @@ int main(int argc, char **argv)
                 quit = 1;
         }
 
-        // opcode = Fetch();
+        // opcode = FetchByte();
         // Decode
         // Execute
 

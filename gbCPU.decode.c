@@ -26,16 +26,16 @@ short DecodeExecute(BYTE opcode, FILE *output)
     switch(opcode)
     {
         // Load immediate word into register
-        case 0x01: cycles = LoadWord(&regBC.word, GetImmediateWord(output), immediate);
+        case 0x01: cycles = LoadWord(&regBC.word, FetchWord(output), immediate);
                    fprintf(output, OPRW, "LD", "BC", regBC.word);
                    break;
-        case 0x11: cycles = LoadWord(&regDE.word, GetImmediateWord(output), immediate);
+        case 0x11: cycles = LoadWord(&regDE.word, FetchWord(output), immediate);
                    fprintf(output, OPRW, "LD", "DE", regDE.word);
                    break;
-        case 0x21: cycles = LoadWord(&regHL.word, GetImmediateWord(output), immediate);
+        case 0x21: cycles = LoadWord(&regHL.word, FetchWord(output), immediate);
                    fprintf(output, OPRW, "LD", "HL", regHL.word);
                    break;
-        case 0x31: cycles = LoadWord(&SP.word, GetImmediateWord(output), immediate);
+        case 0x31: cycles = LoadWord(&SP.word, FetchWord(output), immediate);
                    fprintf(output, OPRW, "LD", "SP", SP.word);
                    break;
 
@@ -132,28 +132,28 @@ short DecodeExecute(BYTE opcode, FILE *output)
                    break;                      
 
         // Load immediate byte into register
-        case 0x06: cycles = LoadByte(&regBC.hi, reg, Fetch(output), immediate);
+        case 0x06: cycles = LoadByte(&regBC.hi, reg, FetchByte(output), immediate);
                    fprintf(output, OPRB, "LD", "B", regBC.hi);
                    break;
-        case 0x0e: cycles = LoadByte(&regBC.lo, reg, Fetch(output), immediate);
+        case 0x0e: cycles = LoadByte(&regBC.lo, reg, FetchByte(output), immediate);
                    fprintf(output, OPRB, "LD", "C", regBC.lo);
                    break;           
-        case 0x16: cycles = LoadByte(&regDE.hi, reg, Fetch(output), immediate);
+        case 0x16: cycles = LoadByte(&regDE.hi, reg, FetchByte(output), immediate);
                    fprintf(output, OPRB, "LD", "D", regDE.hi);
                    break;
-        case 0x1e: cycles = LoadByte(&regDE.lo, reg, Fetch(output), immediate);
+        case 0x1e: cycles = LoadByte(&regDE.lo, reg, FetchByte(output), immediate);
                    fprintf(output, OPRB, "LD", "E", regDE.lo);
                    break;
-        case 0x26: cycles = LoadByte(&regHL.hi, reg, Fetch(output), immediate);
+        case 0x26: cycles = LoadByte(&regHL.hi, reg, FetchByte(output), immediate);
                    fprintf(output, OPRB, "LD", "H", regHL.hi);
                    break;
-        case 0x2e: cycles = LoadByte(&regHL.lo, reg, Fetch(output), immediate);
+        case 0x2e: cycles = LoadByte(&regHL.lo, reg, FetchByte(output), immediate);
                    fprintf(output, OPRB, "LD", "L", regHL.lo);
                    break;
-        case 0x36: cycles = LoadByte(&mainMemory[regHL.word], memory, Fetch(output), immediate);
+        case 0x36: cycles = LoadByte(&mainMemory[regHL.word], memory, FetchByte(output), immediate);
                    fprintf(output, OPRB, "LD", "(HL)", mainMemory[regHL.word]);
                    break;
-        case 0x3e: cycles = LoadByte(&regAF.hi, reg, Fetch(output), immediate);
+        case 0x3e: cycles = LoadByte(&regAF.hi, reg, FetchByte(output), immediate);
                    fprintf(output, OPRB, "LD", "A", regAF.hi);
                    break;                                                                                               
 
@@ -175,21 +175,21 @@ short DecodeExecute(BYTE opcode, FILE *output)
                    break;
 
         // Jump relative to current PC
-        case 0x18: fprintf(output, OPL, "JR", (S_BYTE)Fetch(output));
+        case 0x18: fprintf(output, OPL, "JR", (S_BYTE)FetchByte(output));
                    break;
-        case 0x28: byteImmediate = Fetch(output);
+        case 0x28: byteImmediate = FetchByte(output);
                    cycles = JumpRelativeCond(zero, true, (S_BYTE)byteImmediate);
                    fprintf(output, OPRL, "JR", "Z", (S_BYTE)byteImmediate);
                    break;
-        case 0x38: byteImmediate = Fetch(output);
+        case 0x38: byteImmediate = FetchByte(output);
                    cycles = JumpRelativeCond(carry, true, (S_BYTE)byteImmediate);
                    fprintf(output, OPRL, "JR", "C", (S_BYTE)byteImmediate);
                    break;                   
-        case 0x20: byteImmediate = Fetch(output);
+        case 0x20: byteImmediate = FetchByte(output);
                    cycles = JumpRelativeCond(zero, false, (S_BYTE)byteImmediate);
                    fprintf(output, OPRL, "JR", "NZ", (S_BYTE)byteImmediate);
                    break;
-        case 0x30: byteImmediate = Fetch(output);
+        case 0x30: byteImmediate = FetchByte(output);
                    cycles = JumpRelativeCond(carry, false, (S_BYTE)byteImmediate);
                    fprintf(output, OPRL, "JR", "NC", (S_BYTE)byteImmediate);
                    break;                                      
@@ -530,33 +530,33 @@ short DecodeExecute(BYTE opcode, FILE *output)
         case 0xd0: fprintf(output, OPR, "RET", "NC");
                    break;
 
-        // Opcode cb is a prefix for many instructions. Fetch next opcode and decode to determine
+        // Opcode cb is a prefix for many instructions. FetchByte next opcode and decode to determine
         // the appropriate operation to execute
-        case 0xcb: cycles = DecodeExecuteCB(Fetch(output), output);
+        case 0xcb: cycles = DecodeExecuteCB(FetchByte(output), output);
                    break;
 
         // Call subroutine at immediate word address
-        case 0xcd: address = GetImmediateWord(output);
+        case 0xcd: address = FetchWord(output);
                    cycles = Call(address);
                    fprintf(output, OPW, "CALL", address);
                    break;
-        case 0xcc: fprintf(output, OPRW, "CALL", "Z", GetImmediateWord(output));
+        case 0xcc: fprintf(output, OPRW, "CALL", "Z", FetchWord(output));
                    break;
-        case 0xdc: fprintf(output, OPRW, "CALL", "C", GetImmediateWord(output));
+        case 0xdc: fprintf(output, OPRW, "CALL", "C", FetchWord(output));
                    break;
-        case 0xc4: fprintf(output, OPRW, "CALL", "NZ", GetImmediateWord(output));
+        case 0xc4: fprintf(output, OPRW, "CALL", "NZ", FetchWord(output));
                    break;
-        case 0xd4: fprintf(output, OPRW, "CALL", "NC", GetImmediateWord(output));
+        case 0xd4: fprintf(output, OPRW, "CALL", "NC", FetchWord(output));
                    break;
 
         // Load / Store byte at register P1 (address 0xff00) + byte immediate into register A
-        case 0xe0: byteImmediate = Fetch(output);
+        case 0xe0: byteImmediate = FetchByte(output);
                    cycles = LoadByte(&mainMemory[byteImmediate + REG_P1], immediateOffset, regAF.hi, reg);
                    fprintf(output, OPBMR, "LDH", byteImmediate, "A");
                    break;
-        case 0xf0: byteImmediate = Fetch(output);
+        case 0xf0: byteImmediate = FetchByte(output);
                    cycles = LoadByte(&regAF.hi, reg, mainMemory[byteImmediate + REG_P1], immediateOffset);
-                   fprintf(output, OPRBM, "LDH", "A", Fetch(output));
+                   fprintf(output, OPRBM, "LDH", "A", FetchByte(output));
                    break;
 
         // Load / Store byte at register P1 (address 0xff00) + C into register A
@@ -568,17 +568,17 @@ short DecodeExecute(BYTE opcode, FILE *output)
                    break;
 
         // Load / Store word immediate into register A
-        case 0xea: address = GetImmediateWord(output);
+        case 0xea: address = FetchWord(output);
                    cycles = LoadByte(&mainMemory[address], memAtImmediate, regAF.hi, reg);
                    fprintf(output, OPWMR, "LD", address, "A");
                    break;
-        case 0xfa: address = GetImmediateWord(output);
+        case 0xfa: address = FetchWord(output);
                    cycles = LoadByte(&regAF.hi, reg, mainMemory[address], memAtImmediate);
-                   fprintf(output, OPRWM, "LD", "A", GetImmediateWord(output));
+                   fprintf(output, OPRWM, "LD", "A", FetchWord(output));
                    break;
 
         // Compare immediate byte with register A (and set appropriate flags)
-        case 0xfe: byteImmediate = Fetch(output);
+        case 0xfe: byteImmediate = FetchByte(output);
                    cycles = Compare(byteImmediate, immediate);
                    fprintf(output, OPB, "CP", byteImmediate);
                    break;

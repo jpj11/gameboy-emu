@@ -48,7 +48,7 @@ union cpuReg regDE;
 union cpuReg regHL;
 
 union cpuReg PC;  // Program Counter
-union cpuReg SP;  // Stack Pointer. cpuReg allows easier access to hi and lo BYTES
+union cpuReg SP;  // Stack Pointer
 
 // Buffer that represents the screen's state at any given time
 BYTE screenData[SCREEN_HEIGHT][SCREEN_WIDTH][CHANNELS];
@@ -64,7 +64,7 @@ enum operandType
     memAtImmediate
 };
 
-// Flags in the most significant bits of register F
+// Flags stored in the most significant bits of register F
 enum cpuFlag
 {
     zero = 7,
@@ -73,10 +73,10 @@ enum cpuFlag
     carry = 4
 };
 
-// Functions that represent the primary phases of execution (and helper functions)
-BYTE Fetch(FILE *output);
+// Primary execution functions
+BYTE FetchByte(FILE *output);
+WORD FetchWord(FILE *output);
 short DecodeExecute(BYTE opcode, FILE *output);
-WORD GetImmediateWord(FILE *output);
 
 // Load instructions
 short LoadByte(BYTE *dest, enum operandType destType, BYTE src, enum operandType srcType);
@@ -84,24 +84,26 @@ short LoadWord(WORD *dest, WORD src, enum operandType srcType);
 short Push(WORD value);
 short Pop(WORD *dest);
 
-// Control flow functions
-short JumpRelativeCond(enum cpuFlag flag, bool condition, S_BYTE offset);
-short Call(WORD address);
-short Return();
+// Byte arithmetic instructions
+short Subtract(BYTE value, enum operandType valueType);
+short Xor(BYTE value, enum operandType valueType);
+short Compare(BYTE value, enum operandType valueType);
+short IncrementByte(BYTE *value, enum operandType valueType);
+short DecrementByte(BYTE *value, enum operandType valueType);
 
 // Word arithmetic instructions
 short IncrementWord(WORD *value);
 
-// Byte arithmetic instructions
-short IncrementByte(BYTE *value, enum operandType valueType);
-short DecrementByte(BYTE *value, enum operandType valueType);
-short Subtract(BYTE value, enum operandType valueType);
-short Xor(BYTE value, enum operandType valueType);
-short Compare(BYTE value, enum operandType valueType);
+// Rotate and shift instructions
+short RotateLeftAccu();
+short RotateLeft(BYTE *value, enum operandType valueType);
 
 // Bitwise instructions
 short Bit(short bit, BYTE *toTest, enum operandType toTestType);
-short RotateLeft(BYTE *value, enum operandType valueType);
-short RotateLeftAccu();
+
+// Jump instructions
+short JumpRelativeCond(enum cpuFlag flag, bool condition, S_BYTE offset);
+short Call(WORD address);
+short Return();
 
 #endif
