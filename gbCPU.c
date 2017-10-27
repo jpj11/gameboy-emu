@@ -162,6 +162,26 @@ short IncrementByte(BYTE *value, enum operandType valueType)
         return 12;
 }
 
+short Subtract(BYTE value, enum operandType valueType)
+{
+    // Set flags based on operands
+    (regAF.hi & 0x0f) < (value & 0x0f) ? SetFlag(halfCarry) : UnsetFlag(halfCarry);
+    regAF.hi < value ? SetFlag(carry) : UnsetFlag(carry);
+    SetFlag(subtract);
+
+    // Calculate the difference
+    regAF.hi -= value;
+    
+    // Set flags based on result
+    regAF.hi == 0x00 ? SetFlag(zero) : UnsetFlag(zero);
+
+    // Return the appropriate number of cycles
+    if(valueType == reg)
+        return 4;
+    else
+        return 8;
+}
+
 short Xor(BYTE value, enum operandType valueType)
 {
     // Xor register A with value and store result in register A
@@ -182,14 +202,16 @@ short Xor(BYTE value, enum operandType valueType)
 
 short Compare(BYTE value, enum operandType valueType)
 {
+    // Set flags based on operands
+    (regAF.hi & 0x0f) < (value & 0x0f) ? SetFlag(halfCarry) : UnsetFlag(halfCarry);
+    regAF.hi < value ? SetFlag(carry) : UnsetFlag(carry);
+    SetFlag(subtract);
+
     // Calculate the comparison
     BYTE result = regAF.hi - value;
 
     // Set flags based on result
     result == 0x00 ? SetFlag(zero) : UnsetFlag(zero);
-    SetFlag(subtract);
-    (regAF.hi & 0x0f) < (value & 0x0f) ? SetFlag(halfCarry) : UnsetFlag(halfCarry);
-    regAF.hi < value ? SetFlag(carry) : UnsetFlag(carry);
 
     // Return the appropriate number of cycles
     if(valueType == reg)
@@ -200,13 +222,16 @@ short Compare(BYTE value, enum operandType valueType)
 
 short DecrementByte(BYTE *value, enum operandType valueType)
 {
+    // Set flags based on operands
+    (*value & 0x0f) < 1 ? SetFlag(halfCarry) : UnsetFlag(halfCarry);
+    *value < 1 ? SetFlag(carry) : UnsetFlag(carry);
+    SetFlag(subtract);
+
     // Decrement byte
     *value = *value - 1;
 
-    // Set and unset flags as necessary
+    // Set flags based on result
     *value == 0x00 ? SetFlag(zero) : UnsetFlag(zero);
-    SetFlag(subtract);
-    *value > 0x0f ? SetFlag(halfCarry) : UnsetFlag(halfCarry);
 
     // Return the appropriate number of cycles
     if(valueType == reg)

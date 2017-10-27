@@ -418,21 +418,29 @@ short DecodeExecute(BYTE opcode, FILE *output)
                    break;                                                         
 
         // Subtract register / memory
-        case 0x90: fprintf(output, OPR, "SUB", "B");
+        case 0x90: cycles = Subtract(regBC.hi, reg);
+				   fprintf(output, OPR, "SUB", "B");
                    break;
-        case 0x91: fprintf(output, OPR, "SUB", "C");
+        case 0x91: cycles = Subtract(regBC.lo, reg);
+				   fprintf(output, OPR, "SUB", "C");
                    break;
-        case 0x92: fprintf(output, OPR, "SUB", "D");
+        case 0x92: cycles = Subtract(regDE.hi, reg);
+				   fprintf(output, OPR, "SUB", "D");
                    break;
-        case 0x93: fprintf(output, OPR, "SUB", "E");
+        case 0x93: cycles = Subtract(regDE.lo, reg);
+				   fprintf(output, OPR, "SUB", "E");
                    break;
-        case 0x94: fprintf(output, OPR, "SUB", "H");
+        case 0x94: cycles = Subtract(regHL.hi, reg);
+				   fprintf(output, OPR, "SUB", "H");
                    break;
-        case 0x95: fprintf(output, OPR, "SUB", "L");
+        case 0x95: cycles = Subtract(regHL.lo, reg);
+				   fprintf(output, OPR, "SUB", "L");
                    break;
-        case 0x96: fprintf(output, OPR, "SUB", "(HL)");
+        case 0x96: cycles = Subtract(mainMemory[regHL.word], memory);
+                   fprintf(output, OPR, "SUB", "(HL)");
                    break;
-        case 0x97: fprintf(output, OPR, "SUB", "A");
+        case 0x97: cycles = Subtract(regAF.hi, reg);
+				   fprintf(output, OPR, "SUB", "A");
                    break;                                                                                                                  
 
         // Xor register / memory
@@ -560,9 +568,13 @@ short DecodeExecute(BYTE opcode, FILE *output)
                    break;
 
         // Load / Store word immediate into register A
-        case 0xea: fprintf(output, OPWMR, "LD", GetImmediateWord(output), "A");
+        case 0xea: address = GetImmediateWord(output);
+                   cycles = LoadByte(&mainMemory[address], memAtImmediate, regAF.hi, reg);
+                   fprintf(output, OPWMR, "LD", address, "A");
                    break;
-        case 0xfa: fprintf(output, OPRWM, "LD", "A", GetImmediateWord(output));
+        case 0xfa: address = GetImmediateWord(output);
+                   cycles = LoadByte(&regAF.hi, reg, mainMemory[address], memAtImmediate);
+                   fprintf(output, OPRWM, "LD", "A", GetImmediateWord(output));
                    break;
 
         // Compare immediate byte with register A (and set appropriate flags)
