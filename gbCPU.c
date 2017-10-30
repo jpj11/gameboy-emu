@@ -227,11 +227,19 @@ short IncrementWord(WORD *value)
     return 8;
 }
 
+// Decrement WORD at address value
+short DecrementWord(WORD *value)
+{
+    // Decrement word by 1
+    *value = *value + 1;
+    return 8;
+}
+
 
 // ==================== Rotate and Shift Instructions ===================== //
 
 // Rotate the bits of register A left through the carry flag
-short RotateLeftAccu()
+short RotateAccuLeftThruCarry()
 {
     // Store the state of the carry flag
     short bitZero = GetFlag(carry);
@@ -246,6 +254,26 @@ short RotateLeftAccu()
     // Shift left and put old value of carry flag at bit 0
     regAF.hi <<= 1;
     regAF.hi |= bitZero;
+
+    return 4;
+}
+
+// Rotate the bits of register A right through the carry flag
+short RotateAccuRightThruCarry()
+{
+    // Stor the state of the carry flag
+    short bitSeven = GetFlag(carry);
+
+    // Clear flags
+    regAF.lo = 0x00;
+
+    // Set the flag if the least significant bit of accumulator is 1
+    if(regAF.hi & 0x01)
+        SetFlag(carry);
+
+    // Shift right and put old value of carry flag at bit 7
+    regAF.hi >>= 1;
+    regAF.hi |= bitSeven << 7;
 
     return 4;
 }
@@ -300,6 +328,14 @@ short Bit(short position, BYTE *toTest, enum operandType toTestType)
 
 
 // =========================== Jump Instructions ========================== //
+
+// Jump to PC + offset
+short JumpRelative(S_BYTE offset)
+{
+    // Jump to PC + offset
+    PC.word += offset;
+    return 12;
+}
 
 // Jump to PC + offset if the flag and condition match
 short JumpRelativeCond(enum cpuFlag flag, bool condition, S_BYTE offset)

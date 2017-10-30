@@ -93,15 +93,18 @@ short DecrementByte(BYTE *value, enum operandType valueType);
 
 // Word arithmetic instructions
 short IncrementWord(WORD *value);
+short DecrementWord(WORD *value);
 
 // Rotate and shift instructions
-short RotateLeftAccu();
+short RotateAccuLeftThruCarry();
+short RotateAccuRightThruCarry();
 short RotateLeft(BYTE *value, enum operandType valueType);
 
 // Bitwise instructions
 short Bit(short bit, BYTE *toTest, enum operandType toTestType);
 
 // Jump instructions
+short JumpRelative(S_BYTE offset);
 short JumpRelativeCond(enum cpuFlag flag, bool condition, S_BYTE offset);
 short Call(WORD address);
 short Return();

@@ -158,24 +158,31 @@ short DecodeExecute(BYTE opcode, FILE *output)
                    break;                                                                                               
 
         // Decrement word
-        case 0x0b: fprintf(output, OPR, "DEC", "BC");
+        case 0x0b: cycles = DecrementWord(&regBC.word);
+                   fprintf(output, OPR, "DEC", "BC");
                    break;
-        case 0x1b: fprintf(output, OPR, "DEC", "DE");
+        case 0x1b: cycles = DecrementWord(&regDE.word);
+                   fprintf(output, OPR, "DEC", "DE");
                    break;
-        case 0x2b: fprintf(output, OPR, "DEC", "HL");
+        case 0x2b: cycles = DecrementWord(&regHL.word);
+                   fprintf(output, OPR, "DEC", "HL");
                    break;
-        case 0x3b: fprintf(output, OPR, "DEC", "SP");
+        case 0x3b: cycles = DecrementWord(&SP.word);
+                   fprintf(output, OPR, "DEC", "SP");
                    break;                                                                                                                                                                     
 
         // Rotate register A left / right through carry flag
-        case 0x17: cycles = RotateLeftAccu();
+        case 0x17: cycles = RotateAccuLeftThruCarry();
                    fprintf(output, OP, "RLA");
                    break;
-        case 0x1F: fprintf(output, OP, "RRA");
+        case 0x1F: cycles = RotateAccuRightThruCarry();
+                   fprintf(output, OP, "RRA");
                    break;
 
         // Jump relative to current PC
-        case 0x18: fprintf(output, OPL, "JR", (S_BYTE)FetchByte(output));
+        case 0x18: byteImmediate = FetchByte(output);
+                   cycles = JumpRelative((S_BYTE)byteImmediate);
+                   fprintf(output, OPL, "JR", (S_BYTE)byteImmediate);
                    break;
         case 0x28: byteImmediate = FetchByte(output);
                    cycles = JumpRelativeCond(zero, true, (S_BYTE)byteImmediate);
