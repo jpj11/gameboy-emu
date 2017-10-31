@@ -112,7 +112,7 @@ short AddByte(BYTE value, enum operandType valueType)
 {
     // Set flags based on operands
     UnsetFlag(subtract);
-    regAF.hi & 0x0f > 0x0f - (value & 0x0f) ? SetFlag(halfCarry) : UnsetFlag(halfCarry);
+    (regAF.hi & 0x0f) > 0x0f - (value & 0x0f) ? SetFlag(halfCarry) : UnsetFlag(halfCarry);
     regAF.hi > 0xff - value ? SetFlag(carry) : UnsetFlag(carry);
 
     // Calculate the sum
@@ -133,7 +133,7 @@ short Subtract(BYTE value, enum operandType valueType)
 {
     // Set flags based on operands
     SetFlag(subtract);
-    regAF.hi & 0x0f < value & 0x0f ? SetFlag(halfCarry) : UnsetFlag(halfCarry);
+    (regAF.hi & 0x0f) < (value & 0x0f) ? SetFlag(halfCarry) : UnsetFlag(halfCarry);
     regAF.hi < value ? SetFlag(carry) : UnsetFlag(carry);
 
     // Calculate the difference
@@ -173,7 +173,7 @@ short Compare(BYTE value, enum operandType valueType)
 {
     // Set flags based on operands
     SetFlag(subtract);
-    regAF.hi & 0x0f < value & 0x0f ? SetFlag(halfCarry) : UnsetFlag(halfCarry);
+    (regAF.hi & 0x0f) < (value & 0x0f) ? SetFlag(halfCarry) : UnsetFlag(halfCarry);
     regAF.hi < value ? SetFlag(carry) : UnsetFlag(carry);
 
     // Calculate the comparison
@@ -194,7 +194,7 @@ short IncrementByte(BYTE *value, enum operandType valueType)
 {
     // Set flags based on operands
     UnsetFlag(subtract);
-    *value & 0x0f > 0x0e ? SetFlag(halfCarry) : UnsetFlag(halfCarry);
+    (*value & 0x0f) > 0x0e ? SetFlag(halfCarry) : UnsetFlag(halfCarry);
 
     // Increment byte
     *value = *value + 1;
@@ -214,7 +214,7 @@ short DecrementByte(BYTE *value, enum operandType valueType)
 {
     // Set flags based on operands
     SetFlag(subtract);
-    *value & 0x0f < 0x01 ? SetFlag(halfCarry) : UnsetFlag(halfCarry);
+    (*value & 0x0f) < 0x01 ? SetFlag(halfCarry) : UnsetFlag(halfCarry);
 
     // Decrement byte
     *value = *value - 1;
