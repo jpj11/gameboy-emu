@@ -407,21 +407,29 @@ short DecodeExecute(BYTE opcode, FILE *output)
                    break;  
 
         // Add byte to register A and store result in register A
-        case 0x80: fprintf(output, OPRR, "ADD", "A", "B");
+        case 0x80: cycles = AddByte(regBC.hi, reg);
+				   fprintf(output, OPRR, "ADD", "A", "B");
                    break;
-        case 0x81: fprintf(output, OPRR, "ADD", "A", "C");
+        case 0x81: cycles = AddByte(regBC.lo, reg);
+				   fprintf(output, OPRR, "ADD", "A", "C");
                    break;
-        case 0x82: fprintf(output, OPRR, "ADD", "A", "D");
+        case 0x82: cycles = AddByte(regDE.hi, reg);
+				   fprintf(output, OPRR, "ADD", "A", "D");
                    break;
-        case 0x83: fprintf(output, OPRR, "ADD", "A", "E");
+        case 0x83: cycles = AddByte(regDE.lo, reg);
+				   fprintf(output, OPRR, "ADD", "A", "E");
                    break;
-        case 0x84: fprintf(output, OPRR, "ADD", "A", "H");
+        case 0x84: cycles = AddByte(regHL.hi, reg);
+				   fprintf(output, OPRR, "ADD", "A", "H");
                    break;
-        case 0x85: fprintf(output, OPRR, "ADD", "A", "L");
+        case 0x85: cycles = AddByte(regHL.lo, reg);
+				   fprintf(output, OPRR, "ADD", "A", "L");
                    break;
-        case 0x86: fprintf(output, OPRR, "ADD", "A", "(HL)");
+        case 0x86: cycles = AddByte(mainMemory[regHL.word], memory);
+                   fprintf(output, OPRR, "ADD", "A", "(HL)");
                    break;
-        case 0x87: fprintf(output, OPRR, "ADD", "A", "A");
+        case 0x87: cycles = AddByte(regAF.hi, reg);
+				   fprintf(output, OPRR, "ADD", "A", "A");
                    break;                                                         
 
         // Subtract register / memory
@@ -477,21 +485,29 @@ short DecodeExecute(BYTE opcode, FILE *output)
                    break;
 
         // Compare byte with register A
-        case 0xb8: fprintf(output, OPR, "CP", "B");
+        case 0xb8: cycles = Compare(regBC.hi, reg);
+				   fprintf(output, OPR, "CP", "B");
                    break;
-        case 0xb9: fprintf(output, OPR, "CP", "C");
+        case 0xb9: cycles = Compare(regBC.lo, reg);
+				   fprintf(output, OPR, "CP", "C");
                    break;
-        case 0xba: fprintf(output, OPR, "CP", "D");
+        case 0xba: cycles = Compare(regDE.hi, reg);
+				   fprintf(output, OPR, "CP", "D");
                    break;
-        case 0xbb: fprintf(output, OPR, "CP", "E");
+        case 0xbb: cycles = Compare(regDE.lo, reg);
+				   fprintf(output, OPR, "CP", "E");
                    break;
-        case 0xbc: fprintf(output, OPR, "CP", "H");
+        case 0xbc: cycles = Compare(regHL.hi, reg);
+				   fprintf(output, OPR, "CP", "H");
                    break;
-        case 0xbd: fprintf(output, OPR, "CP", "L");
+        case 0xbd: cycles = Compare(regHL.lo, reg);
+				   fprintf(output, OPR, "CP", "L");
                    break;
-        case 0xbe: fprintf(output, OPR, "CP", "(HL)");
+        case 0xbe: cycles = Compare(mainMemory[regHL.word], memory);
+                   fprintf(output, OPR, "CP", "(HL)");
                    break;
-        case 0xbf: fprintf(output, OPR, "CP", "A");
+        case 0xbf: cycles = Compare(regAF.hi, reg);
+				   fprintf(output, OPR, "CP", "A");
                    break;                                                                                                                  
 
         // Pop word off of stack
@@ -600,28 +616,28 @@ short DecodeExecuteCB(BYTE opcode, FILE *output)
     switch (opcode)
     {
         // Rotate left through carry
-        case 0x10: cycles = RotateLeft(&regBC.hi, reg);
+        case 0x10: cycles = RotateLeftThruCarry(&regBC.hi, reg);
                    fprintf(output, OPR, "RL", "B");
                    break;
-        case 0x11: cycles = RotateLeft(&regBC.lo, reg);
+        case 0x11: cycles = RotateLeftThruCarry(&regBC.lo, reg);
                    fprintf(output, OPR, "RL", "C");
                    break;
-        case 0x12: cycles = RotateLeft(&regDE.hi, reg);
+        case 0x12: cycles = RotateLeftThruCarry(&regDE.hi, reg);
                    fprintf(output, OPR, "RL", "D");
                    break;
-        case 0x13: cycles = RotateLeft(&regDE.lo, reg);
+        case 0x13: cycles = RotateLeftThruCarry(&regDE.lo, reg);
                    fprintf(output, OPR, "RL", "E");
                    break;
-        case 0x14: cycles = RotateLeft(&regHL.hi, reg);
+        case 0x14: cycles = RotateLeftThruCarry(&regHL.hi, reg);
                    fprintf(output, OPR, "RL", "H");
                    break;
-        case 0x15: cycles = RotateLeft(&regHL.lo, reg);
+        case 0x15: cycles = RotateLeftThruCarry(&regHL.lo, reg);
                    fprintf(output, OPR, "RL", "L");
                    break;
-        case 0x16: cycles = RotateLeft(&mainMemory[regHL.word], memory);
+        case 0x16: cycles = RotateLeftThruCarry(&mainMemory[regHL.word], memory);
                    fprintf(output, OPR, "RL", "(HL)");
                    break;
-        case 0x17: cycles = RotateLeft(&regAF.hi, reg);
+        case 0x17: cycles = RotateLeftThruCarry(&regAF.hi, reg);
                    fprintf(output, OPR, "RL", "A");
                    break;                                                                                                                  
 

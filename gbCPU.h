@@ -85,6 +85,7 @@ short Push(WORD value);
 short Pop(WORD *dest);
 
 // Byte arithmetic instructions
+short AddByte(BYTE value, enum operandType valueType);
 short Subtract(BYTE value, enum operandType valueType);
 short Xor(BYTE value, enum operandType valueType);
 short Compare(BYTE value, enum operandType valueType);
@@ -98,7 +99,7 @@ short DecrementWord(WORD *value);
 // Rotate and shift instructions
 short RotateAccuLeftThruCarry();
 short RotateAccuRightThruCarry();
-short RotateLeft(BYTE *value, enum operandType valueType);
+short RotateLeftThruCarry(BYTE *value, enum operandType valueType);
 
 // Bitwise instructions
 short Bit(short bit, BYTE *toTest, enum operandType toTestType);

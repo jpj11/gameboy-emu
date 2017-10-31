@@ -101,28 +101,40 @@ short Pop(WORD *dest)
     *dest <<= 8;
     *dest |= lo;
 
-    // If dest is regsiter AF, then set and unset flags as necessary
-    if (dest == &regAF.word)
-    {
-        *dest == 0x0000 ? SetFlag(zero) : UnsetFlag(zero);
-        UnsetFlag(subtract);
-        *dest > 0x000f ? SetFlag(halfCarry) : UnsetFlag(halfCarry);
-        UnsetFlag(carry);
-    }
-
     return 12;
 }
 
 
 // ===================== Byte Arithmetic Instructions ===================== //
 
+// Add BYTE value to register A and store sum in A
+short AddByte(BYTE value, enum operandType valueType)
+{
+    // Set flags based on operands
+    UnsetFlag(subtract);
+    regAF.hi & 0x0f > 0x0f - (value & 0x0f) ? SetFlag(halfCarry) : UnsetFlag(halfCarry);
+    regAF.hi > 0xff - value ? SetFlag(carry) : UnsetFlag(carry);
+
+    // Calculate the sum
+    regAF.hi += value;
+
+    // Set flags based on result
+    regAF.hi == 0x00 ? SetFlag(zero) : UnsetFlag(zero);
+
+    // Return the appropriate number of cycles
+    if(valueType == reg)
+        return 4;
+    else
+        return 8;
+}
+
 // Subtract BYTE value from register A and store difference in A
 short Subtract(BYTE value, enum operandType valueType)
 {
     // Set flags based on operands
-    (regAF.hi & 0x0f) < (value & 0x0f) ? SetFlag(halfCarry) : UnsetFlag(halfCarry);
-    regAF.hi < value ? SetFlag(carry) : UnsetFlag(carry);
     SetFlag(subtract);
+    regAF.hi & 0x0f < value & 0x0f ? SetFlag(halfCarry) : UnsetFlag(halfCarry);
+    regAF.hi < value ? SetFlag(carry) : UnsetFlag(carry);
 
     // Calculate the difference
     regAF.hi -= value;
@@ -140,11 +152,11 @@ short Subtract(BYTE value, enum operandType valueType)
 // Xor BYTE value with register A and store result in A
 short Xor(BYTE value, enum operandType valueType)
 {
-    // Xor register A with value and store result in register A
-    regAF.hi ^= value;
-
     // Unset all flags
     regAF.lo = 0x00;
+
+    // Xor register A with value and store result in register A
+    regAF.hi ^= value;
 
     // Set and unset flags as necessary
     regAF.hi == 0x00 ? SetFlag(zero) : UnsetFlag(zero);
@@ -160,9 +172,9 @@ short Xor(BYTE value, enum operandType valueType)
 short Compare(BYTE value, enum operandType valueType)
 {
     // Set flags based on operands
-    (regAF.hi & 0x0f) < (value & 0x0f) ? SetFlag(halfCarry) : UnsetFlag(halfCarry);
-    regAF.hi < value ? SetFlag(carry) : UnsetFlag(carry);
     SetFlag(subtract);
+    regAF.hi & 0x0f < value & 0x0f ? SetFlag(halfCarry) : UnsetFlag(halfCarry);
+    regAF.hi < value ? SetFlag(carry) : UnsetFlag(carry);
 
     // Calculate the comparison
     BYTE result = regAF.hi - value;
@@ -180,13 +192,15 @@ short Compare(BYTE value, enum operandType valueType)
 // Increment the BYTE at address value
 short IncrementByte(BYTE *value, enum operandType valueType)
 {
+    // Set flags based on operands
+    UnsetFlag(subtract);
+    *value & 0x0f > 0x0e ? SetFlag(halfCarry) : UnsetFlag(halfCarry);
+
     // Increment byte
     *value = *value + 1;
 
-    // Set and unset flags as necessary
+    // Set flags based on result
     *value == 0x00 ? SetFlag(zero) : UnsetFlag(zero);
-    UnsetFlag(subtract);
-    *value > 0x0f ? SetFlag(halfCarry) : UnsetFlag(halfCarry);
 
     // Return the appropriate number of cycles
     if(valueType == reg)
@@ -199,9 +213,8 @@ short IncrementByte(BYTE *value, enum operandType valueType)
 short DecrementByte(BYTE *value, enum operandType valueType)
 {
     // Set flags based on operands
-    (*value & 0x0f) < 1 ? SetFlag(halfCarry) : UnsetFlag(halfCarry);
-    *value < 1 ? SetFlag(carry) : UnsetFlag(carry);
     SetFlag(subtract);
+    *value & 0x0f < 0x01 ? SetFlag(halfCarry) : UnsetFlag(halfCarry);
 
     // Decrement byte
     *value = *value - 1;
@@ -279,7 +292,7 @@ short RotateAccuRightThruCarry()
 }
 
 // Rotate the bits of the BYTE at address value left through the carry flag
-short RotateLeft(BYTE *value, enum operandType valueType)
+short RotateLeftThruCarry(BYTE *value, enum operandType valueType)
 {
     // Store the state of the carry flag
     short bitZero = GetFlag(carry);
@@ -311,13 +324,15 @@ short RotateLeft(BYTE *value, enum operandType valueType)
 // Test the bit at position position of the BYTE at address toTest
 short Bit(short position, BYTE *toTest, enum operandType toTestType)
 {
+    // Set flags based on operands
+    UnsetFlag(subtract);
+    SetFlag(halfCarry);
+
     // Find the value of the bit at position in toTest
     short value = (*toTest >> position) & 1;
 
-    // Set and unset flags as necessary
+    // Set flags based on results
     value == 0 ? SetFlag(zero) : UnsetFlag(zero);
-    UnsetFlag(subtract);
-    SetFlag(halfCarry);
 
     // Return appropriate number of cycles
     if (toTestType == reg)
