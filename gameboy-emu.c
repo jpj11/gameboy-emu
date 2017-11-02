@@ -3,6 +3,7 @@
 #include <SDL2/SDL.h>
 #include "gbCPU.h"
 
+bool CheckValidInput(int argc, char **argv);
 void InitSystem();
 
 int main(int argc, char **argv)
@@ -41,13 +42,15 @@ int main(int argc, char **argv)
     }
 
     // Check for bootstrap ROM
-    FILE *dmg = NULL;
-    if((dmg = fopen("DMG_ROM.bin", "rb")) == NULL)
-    {
-        fprintf(stderr, "INITIALIZATION ERROR!\nCould not open DMG_ROM.bin");
-        return -1;
-    }
-    fread(&mainMemory[0x0000], 0x0100, 1, dmg);
+    strcpy((char *)mainMemory, BOOTSTRAP_ROM);
+
+    // FILE *dmg = NULL;
+    // if((dmg = fopen("DMG_ROM.bin", "rb")) == NULL)
+    // {
+    //     fprintf(stderr, "INITIALIZATION ERROR!\nCould not open DMG_ROM.bin");
+    //     return -1;
+    // }
+    // fread(&mainMemory[0x0000], 0x0100, 1, dmg);
 
     for(int i = 0; i < 48; i++)
     {
