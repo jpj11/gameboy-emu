@@ -3,59 +3,20 @@
 #include <SDL2/SDL.h>
 #include "gbCPU.h"
 
-bool CheckValidInput(int argc, char **argv);
+bool InputIsValid(int argc, char **argv, FILE **output);
 void InitSystem();
 
 int main(int argc, char **argv)
 {
-    // Check for valid usage
-    if(argc < 3 || argc > 4)
-    {
-        fprintf(stderr, "USAGE ERROR!\nCorrect Usage: gameboy-emu <rom-file> <graphics-multiple>"
-                "<optional-output-file>");
-        return -1;
-    }
-    
-    // Open ROM file
-    FILE *input = NULL;
-    if((input = fopen(argv[1], "rb")) == NULL)
-    {
-        fprintf(stderr, "FILE I/O ERROR!\nCould not open file \"%s\"", argv[1]);
-        return -1;
-    }
-    fclose(input);
+    // Where diagnostic output is printed
+    FILE *output = stdout;
 
-    // Check for valid multiplier
-    if(atoi(argv[2]) <= 0)
-    {
-        fprintf(stderr, "GRAPHICS ERROR!\n<graphics-multiple> must be a positive integer");
+    // Check for valid files and usage
+    if(!InputIsValid(argc, argv, &output))
         return -1;
-    }
+
+    // Integer multiple for graphics
     const unsigned int MULTIPLIER = atoi(argv[2]);
-
-    // Check for output file
-    FILE *output = NULL;
-    if((argc == 4) && ((output = fopen(argv[3], "w")) == NULL))
-    {
-        fprintf(stderr, "FILE I/O ERROR!\nCould not open file \"%s\"", argv[3]);
-        return -1;
-    }
-
-    // Check for bootstrap ROM
-    strcpy((char *)mainMemory, BOOTSTRAP_ROM);
-
-    // FILE *dmg = NULL;
-    // if((dmg = fopen("DMG_ROM.bin", "rb")) == NULL)
-    // {
-    //     fprintf(stderr, "INITIALIZATION ERROR!\nCould not open DMG_ROM.bin");
-    //     return -1;
-    // }
-    // fread(&mainMemory[0x0000], 0x0100, 1, dmg);
-
-    for(int i = 0; i < 48; i++)
-    {
-        mainMemory[0x0104+i] = mainMemory[0x00A8+i];
-    }
 
     SDL_Window *window = NULL;
 
@@ -89,25 +50,11 @@ int main(int argc, char **argv)
         // }
     }
 
+    int quit = 0;
+    SDL_Event event;
     short cycles = -1;
     BYTE opcode = 0x00;
     PC.word = 0x0000;
-    while(PC.word < 0x0100)
-    {
-        opcode = FetchByte(stdout);
-
-        cycles = DecodeExecute(opcode, stdout);
-
-        fprintf(stdout, " <> %d cycles\n", cycles);
-    }
-
-    if(output)
-        fclose(output);
-
-    //InitSystem();
-
-    int quit = 0;
-    SDL_Event event;
 
     while(!quit)
     {
@@ -119,14 +66,69 @@ int main(int argc, char **argv)
                 quit = 1;
         }
 
-        // opcode = FetchByte();
-        // Decode
-        // Execute
+        opcode = FetchByte(output);
+        cycles = DecodeExecute(opcode, output);
 
         // Draw Graphics
     }
 
+    if(output != stdout)
+        fclose(output);
+
+    free(gamePakMem);
+
     return 0;
+}
+
+bool InputIsValid(int argc, char **argv, FILE **output)
+{
+    FILE *input = NULL;
+    long inputROMSize = 0l;
+
+    // Check for valid usage
+    if(argc < 3 || argc > 4)
+    {
+        fprintf(stderr, "USAGE ERROR!\nCorrect Usage: gameboy-emu <rom-file> <graphics-multiple>"
+                "<optional-output-file>");
+        return false;
+    }
+    
+    // Open ROM file
+    if((input = fopen(argv[1], "rb")) == NULL)
+    {
+        fprintf(stderr, "FILE I/O ERROR!\nCould not open file \"%s\"", argv[1]);
+        return false;
+    }
+    
+    // Calculate the size of the input ROM
+    fseek(input, 0l, SEEK_END);
+    inputROMSize = ftell(input);
+    rewind(input);
+
+    // Load input ROM dynamically
+    gamePakMem = malloc(inputROMSize * sizeof(BYTE));
+    if (fread(gamePakMem, 1, inputROMSize, input) != inputROMSize)
+    {
+        fprintf(stderr, "FILE I/O ERROR!\nRead error occurred while processing input ROM");
+        return false;
+    }
+    fclose(input);
+
+    // Check for valid multiplier
+    if(atoi(argv[2]) <= 0)
+    {
+        fprintf(stderr, "GRAPHICS ERROR!\n<graphics-multiple> must be a positive integer");
+        return false;
+    }
+
+    // Check for output file
+    if((argc == 4) && ((*output = fopen(argv[3], "w")) == NULL))
+    {
+        fprintf(stderr, "FILE I/O ERROR!\nCould not open file \"%s\"", argv[3]);
+        return false;
+    }
+
+    return true;
 }
 
 // (http://bgb.bircd.org/pandocs.htm#powerupsequence)

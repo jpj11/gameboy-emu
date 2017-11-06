@@ -18,13 +18,17 @@ typedef enum
 #define CHANNELS 3
 
 // CPU Constants
+#define CYCLES_PER_SEC 4194304
 #define REG_P1 0xFF00
 
 // Memory Constants
-#define GAME_PAK_SIZE 0x200000
 #define MAIN_MEM_SIZE 0x10000
 
-const char *BOOTSTRAP_ROM =
+// The memory in a Gameboy cartridge
+BYTE *gamePakMem;
+
+// The Gameboy's in unit main memory
+static BYTE mainMemory[MAIN_MEM_SIZE] = 
     "\x31\xFE\xFF\xAF\x21\xFF\x9F\x32\xCB\x7C\x20\xFB\x21\x26\xFF\x0E"
     "\x11\x3E\x80\x32\xE2\x0C\x3E\xF3\xE2\x32\x3E\x77\x77\x3E\xFC\xE0"
     "\x47\x11\x04\x01\x21\x10\x80\x1A\xCD\x95\x00\xCD\x96\x00\x13\x7B"
@@ -41,12 +45,6 @@ const char *BOOTSTRAP_ROM =
     "\xDD\xDC\x99\x9F\xBB\xB9\x33\x3E\x3C\x42\xB9\xA5\xB9\xA5\x42\x3C"
     "\x21\x04\x01\x11\xA8\x00\x1A\x13\xBE\x20\xFE\x23\x7D\xFE\x34\x20"
     "\xF5\x06\x19\x78\x86\x23\x05\x20\xFB\x86\x20\xFE\x3E\x01\xE0\x50";
-
-// The memory in a Gameboy cartridge
-BYTE gamePakMem[GAME_PAK_SIZE];
-
-// The Gameboy's in unit main memory
-BYTE mainMemory[MAIN_MEM_SIZE];
 
 // A union that eases access to hi and lo BYTES of a WORD
 union cpuReg
