@@ -4,6 +4,7 @@
 #include "gbCPU.h"
 
 bool InputIsValid(int argc, char **argv, FILE **output);
+bool InitializeSDL(SDL_Window **window, SDL_Renderer **renderer, const unsigned int MULTIPLIER);
 void InitSystem();
 
 int main(int argc, char **argv)
@@ -19,43 +20,22 @@ int main(int argc, char **argv)
     const unsigned int MULTIPLIER = atoi(argv[2]);
 
     SDL_Window *window = NULL;
+    SDL_Renderer *renderer = NULL;
 
     // Initialize SDL
-    if(SDL_Init(SDL_INIT_VIDEO) < 0)
-    {
-        fprintf(stderr, "SDL ERROR!\nCould not initialize: %s", SDL_GetError());
+    if(!InitializeSDL(&window, &renderer, MULTIPLIER))
         return -1;
-    }
-    else
-    {
-        // Create window
-        window = SDL_CreateWindow("gameboy-emu", SDL_WINDOWPOS_UNDEFINED,
-                 SDL_WINDOWPOS_UNDEFINED, SCREEN_WIDTH * MULTIPLIER,
-                 SCREEN_HEIGHT * MULTIPLIER, SDL_WINDOW_SHOWN);
-        if(window == NULL)
-        {
-            fprintf(stderr, "SDL ERROR!\nWindow could not be created: %s", SDL_GetError());
-            return -1;
-        }
-        // else
-        // {
-        //     // Create renderer
-        //     *renderer = SDL_CreateRenderer(*window, -1, SDL_RENDERER_ACCELERATED);
-        //     if(*renderer == NULL)
-        //     {
-        //         fprintf(stderr, "SDL ERROR!\nRenderer could not be created: %s", SDL_GetError());
-        //         return -1;
-        //     }
-        //     SDL_SetRenderDrawColor(*renderer, 0xFF, 0xFF, 0xFF, 0xFF);
-        // }
-    }
 
-    int quit = 0;
+    bool quit = false;
     SDL_Event event;
     short cycles = -1;
     BYTE opcode = 0x00;
     PC.word = 0x0000;
+    unsigned long long start = 0, end = 0;
+    long double delta = 0.0;
 
+    int count = 0;
+    start = SDL_GetPerformanceCounter();
     while(!quit)
     {
         while(SDL_PollEvent(&event) != 0)
@@ -63,13 +43,25 @@ int main(int argc, char **argv)
             // Do input here
 
             if(event.type == SDL_QUIT)
-                quit = 1;
+                quit = true;
         }
 
-        opcode = FetchByte(output);
-        cycles = DecodeExecute(opcode, output);
+        end = SDL_GetPerformanceCounter();
 
-        // Draw Graphics
+        delta += ((end - start) / (long double)SDL_GetPerformanceFrequency());
+        if(delta >= SEC_PER_FRAME)
+        {
+            delta = 0.0;
+            count++;
+            
+            if(count == 60)
+            {
+                printf("60th frame (roughly 1 second)\n");
+                count = 0;
+            }
+        }
+
+        start = end;
     }
 
     if(output != stdout)
@@ -128,6 +120,41 @@ bool InputIsValid(int argc, char **argv, FILE **output)
         return false;
     }
 
+    return true;
+}
+
+bool InitializeSDL(SDL_Window **window, SDL_Renderer **renderer, const unsigned int MULTIPLIER)
+{
+    // Initialize SDL
+    if(SDL_Init(SDL_INIT_VIDEO) < 0)
+    {
+        fprintf(stderr, "SDL ERROR!\nCould not initialize: %s", SDL_GetError());
+        return false;
+    }
+    else
+    {
+        // Create window
+        *window = SDL_CreateWindow("gameboy-emu", SDL_WINDOWPOS_UNDEFINED,
+                  SDL_WINDOWPOS_UNDEFINED, SCREEN_WIDTH * MULTIPLIER,
+                  SCREEN_HEIGHT * MULTIPLIER, SDL_WINDOW_SHOWN);
+        if(*window == NULL)
+        {
+            fprintf(stderr, "SDL ERROR!\nWindow could not be created: %s", SDL_GetError());
+            return false;
+        }
+        else
+        {
+            // Create renderer
+            *renderer = SDL_CreateRenderer(*window, -1, SDL_RENDERER_ACCELERATED);
+            if(*renderer == NULL)
+            {
+                fprintf(stderr, "SDL ERROR!\nRenderer could not be created: %s", SDL_GetError());
+                return false;
+            }
+            SDL_SetRenderDrawColor(*renderer, 0xFF, 0xFF, 0xFF, 0xFF);
+        }
+    }
+    
     return true;
 }
 

@@ -17,8 +17,9 @@ typedef enum
 #define SCREEN_HEIGHT 144
 #define CHANNELS 3
 
+static const long double SEC_PER_FRAME = 0.01674200569228193537585802779173;
+
 // CPU Constants
-#define CYCLES_PER_SEC 4194304
 #define REG_P1 0xFF00
 
 // Memory Constants
