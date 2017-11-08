@@ -31,11 +31,11 @@ int main(int argc, char **argv)
     short cycles = -1;
     BYTE opcode = 0x00;
     PC.word = 0x0000;
-    unsigned long long start = 0, end = 0;
-    long double delta = 0.0;
+    unsigned long long frameStart = 0, frameEnd = 0, cycleStart = 0;
+    long double frameDelta = 0.0, cycleDelta = 0.0;
 
     int count = 0;
-    start = SDL_GetPerformanceCounter();
+    frameStart = SDL_GetPerformanceCounter();
     while(!quit)
     {
         while(SDL_PollEvent(&event) != 0)
@@ -46,12 +46,23 @@ int main(int argc, char **argv)
                 quit = true;
         }
 
-        end = SDL_GetPerformanceCounter();
 
-        delta += ((end - start) / (long double)SDL_GetPerformanceFrequency());
-        if(delta >= SEC_PER_FRAME)
+        cycleDelta = ((SDL_GetPerformanceCounter() - cycleStart) / (long double)SDL_GetPerformanceFrequency());
+        if(cycleDelta >= (cycles * SEC_PER_CYCLE))
         {
-            delta = 0.0;
+            cycleStart = SDL_GetPerformanceCounter();
+            opcode = FetchByte(output);
+            cycles = DecodeExecute(opcode, output);
+            fprintf(output, " <-> %d cycles\n", cycles);
+        }
+        
+
+        frameEnd = SDL_GetPerformanceCounter();
+
+        frameDelta += ((frameEnd - frameStart) / (long double)SDL_GetPerformanceFrequency());
+        if(frameDelta >= SEC_PER_FRAME)
+        {
+            frameDelta = 0.0;
             count++;
             
             if(count == 60)
@@ -61,7 +72,7 @@ int main(int argc, char **argv)
             }
         }
 
-        start = end;
+        frameStart = frameEnd;
     }
 
     if(output != stdout)

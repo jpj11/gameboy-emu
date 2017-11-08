@@ -16,11 +16,15 @@ typedef enum
 #define SCREEN_WIDTH 160
 #define SCREEN_HEIGHT 144
 #define CHANNELS 3
+#define VERTICAL_SYNC 59.73
 
-static const long double SEC_PER_FRAME = 0.01674200569228193537585802779173;
+static const long double SEC_PER_FRAME = 1.0 / VERTICAL_SYNC;
 
 // CPU Constants
+#define CLOCK_SPEED 4194304
 #define REG_P1 0xFF00
+
+static const long double SEC_PER_CYCLE = 1.0 / CLOCK_SPEED;
 
 // Memory Constants
 #define MAIN_MEM_SIZE 0x10000
