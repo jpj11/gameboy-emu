@@ -10,7 +10,7 @@ void InitSystem();
 int main(int argc, char **argv)
 {
     // Where diagnostic output is printed
-    FILE *output = stdout;
+    FILE *output = NULL;
 
     // Check for valid files and usage
     if(!InputIsValid(argc, argv, &output))
@@ -34,7 +34,7 @@ int main(int argc, char **argv)
     unsigned long long frameStart = 0, frameEnd = 0, cycleStart = 0;
     long double frameDelta = 0.0, cycleDelta = 0.0;
 
-    int count = 0;
+    // int count = 0;
     frameStart = SDL_GetPerformanceCounter();
     while(!quit)
     {
@@ -63,19 +63,19 @@ int main(int argc, char **argv)
         if(frameDelta >= SEC_PER_FRAME)
         {
             frameDelta = 0.0;
-            count++;
             
-            if(count == 60)
-            {
-                printf("60th frame (roughly 1 second)\n");
-                count = 0;
-            }
+            // count++;
+            // if(count == 60)
+            // {
+            //     printf("60th frame (roughly 1 second)\n");
+            //     count = 0;
+            // }
         }
 
         frameStart = frameEnd;
     }
 
-    if(output != stdout)
+    if(output != stdout && output != NULL)
         fclose(output);
 
     free(gamePakMem);
@@ -92,7 +92,7 @@ bool InputIsValid(int argc, char **argv, FILE **output)
     if(argc < 3 || argc > 4)
     {
         fprintf(stderr, "USAGE ERROR!\nCorrect Usage: gameboy-emu <rom-file> <graphics-multiple>"
-                "<optional-output-file>");
+                " <optional-output>");
         return false;
     }
     
@@ -125,10 +125,15 @@ bool InputIsValid(int argc, char **argv, FILE **output)
     }
 
     // Check for output file
-    if((argc == 4) && ((*output = fopen(argv[3], "w")) == NULL))
+    if(argc == 4)
     {
-        fprintf(stderr, "FILE I/O ERROR!\nCould not open file \"%s\"", argv[3]);
-        return false;
+        if(strcmp(argv[3], "console") == 0)
+            *output = stdout;
+        else if((*output = fopen(argv[3], "w")) == NULL)
+        {
+            fprintf(stderr, "FILE I/O ERROR!\nCould not open file \"%s\"", argv[3]);
+            return false;
+        }
     }
 
     return true;
