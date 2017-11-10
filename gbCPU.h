@@ -22,7 +22,18 @@ static const long double SEC_PER_FRAME = 1.0 / VERTICAL_SYNC;
 
 // CPU Constants
 #define CLOCK_SPEED 4194304
-#define REG_P1 0xFF00
+
+#define DIV_SPEED 256
+#define TAC_ZERO 1024
+#define TAC_ONE 16
+#define TAC_TWO 64
+#define TAC_THREE 256
+
+#define REG_P1   0xff00
+#define REG_DIV  0xff04
+#define REG_TIMA 0xff05
+#define REG_TMA  0xff06
+#define REG_TAC  0xff07
 
 static const long double SEC_PER_CYCLE = 1.0 / CLOCK_SPEED;
 

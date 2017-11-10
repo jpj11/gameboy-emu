@@ -26,16 +26,23 @@ int main(int argc, char **argv)
     if(!InitializeSDL(&window, &renderer, MULTIPLIER))
         return -1;
 
-    bool quit = false;
-    SDL_Event event;
-    short cycles = -1;
-    BYTE opcode = 0x00;
+    // Initialize PC
     PC.word = 0x0000;
-    unsigned long long frameStart = 0, frameEnd = 0, cycleStart = 0;
-    long double frameDelta = 0.0, cycleDelta = 0.0;
 
-    // int count = 0;
-    frameStart = SDL_GetPerformanceCounter();
+    bool quit = false;      // Controls main emulation loop
+    SDL_Event event;        // Captures user input
+    short cycles = -1;      // Number of cycles consumed by a given instruction
+    BYTE opcode = 0x00;     // Code containing the instruction to execute 
+    
+    // Used to calculate timings accurate to the original hardware
+    unsigned long long 
+        frameStart = 0,     // Time at beginning of frame
+        cycleStart = 0;     // Time at beginning of cycle
+    long double
+        frameDelta = 0.0,   // Amount of time elapsed since frameStart
+        cycleDelta = 0.0;   // Amount of time elapsed since cycleStart
+
+    // Main emulation loop
     while(!quit)
     {
         while(SDL_PollEvent(&event) != 0)
@@ -46,7 +53,6 @@ int main(int argc, char **argv)
                 quit = true;
         }
 
-
         cycleDelta = ((SDL_GetPerformanceCounter() - cycleStart) / (long double)SDL_GetPerformanceFrequency());
         if(cycleDelta >= (cycles * SEC_PER_CYCLE))
         {
@@ -56,23 +62,12 @@ int main(int argc, char **argv)
             fprintf(output, " <-> %d cycles\n", cycles);
         }
         
-
-        frameEnd = SDL_GetPerformanceCounter();
-
-        frameDelta += ((frameEnd - frameStart) / (long double)SDL_GetPerformanceFrequency());
+        frameDelta = ((SDL_GetPerformanceCounter() - frameStart) / (long double)SDL_GetPerformanceFrequency());
         if(frameDelta >= SEC_PER_FRAME)
         {
-            frameDelta = 0.0;
-            
-            // count++;
-            // if(count == 60)
-            // {
-            //     printf("60th frame (roughly 1 second)\n");
-            //     count = 0;
-            // }
+            frameStart = SDL_GetPerformanceCounter();
+            // Do graphics here
         }
-
-        frameStart = frameEnd;
     }
 
     if(output != stdout && output != NULL)
@@ -91,8 +86,7 @@ bool InputIsValid(int argc, char **argv, FILE **output)
     // Check for valid usage
     if(argc < 3 || argc > 4)
     {
-        fprintf(stderr, "USAGE ERROR!\nCorrect Usage: gameboy-emu <rom-file> <graphics-multiple>"
-                " <optional-output>");
+        fprintf(stderr, "USAGE ERROR!\nCorrect Usage: gameboy-emu <rom-file> <graphics-multiple> <optional-output>");
         return false;
     }
     
