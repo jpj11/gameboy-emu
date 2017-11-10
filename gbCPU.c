@@ -9,7 +9,7 @@
 BYTE FetchByte(FILE *output)
 {
     BYTE val = mainMemory[PC.word++];
-    fprintf(output, "%0#4x --> ", val);
+    fprintf(output, "--> %0#4x ", val);
     return val;
 }
 

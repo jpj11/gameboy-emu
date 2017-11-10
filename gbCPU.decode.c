@@ -1,19 +1,19 @@
 #include <stdio.h>
 #include "gbCPU.h"
 
-#define OP    "%s"
-#define OPL   "%s %d"
-#define OPR   "%s %s"
-#define OPB   "%s %0#4x"
-#define OPW   "%s %0#6x"
-#define OPRL  "%s %s, %d"
-#define OPRR  "%s %s, %s"
-#define OPRB  "%s %s, %0#4x"
-#define OPRW  "%s %s, %0#6x"
-#define OPBMR "%s (%0#4x), %s"
-#define OPRBM "%s %s, (%0#4x)"
-#define OPWMR "%s (%0#6x), %s"
-#define OPRWM "%s %s, (%0#6x)"
+#define OP    "\n%s"
+#define OPL   "\n%s %d"
+#define OPR   "\n%s %s"
+#define OPB   "\n%s %0#4x"
+#define OPW   "\n%s %0#6x"
+#define OPRL  "\n%s %s, %d"
+#define OPRR  "\n%s %s, %s"
+#define OPRB  "\n%s %s, %0#4x"
+#define OPRW  "\n%s %s, %0#6x"
+#define OPBMR "\n%s (%0#4x), %s"
+#define OPRBM "\n%s %s, (%0#4x)"
+#define OPWMR "\n%s (%0#6x), %s"
+#define OPRWM "\n%s %s, (%0#6x)"
 
 short DecodeExecuteCB(BYTE opcode, FILE *output);
 

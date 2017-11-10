@@ -7,6 +7,9 @@ bool InputIsValid(int argc, char **argv, FILE **output);
 bool InitializeSDL(SDL_Window **window, SDL_Renderer **renderer, const unsigned int MULTIPLIER);
 void InitSystem();
 
+unsigned long long Timer(unsigned long long begin, long double threshold, void (*callMe)(FILE *, short *), FILE *output, short *cycles);
+void ExecuteInst(FILE *output, short *cycles);
+
 int main(int argc, char **argv)
 {
     // Where diagnostic output is printed
@@ -26,13 +29,14 @@ int main(int argc, char **argv)
     if(!InitializeSDL(&window, &renderer, MULTIPLIER))
         return -1;
 
-    // Initialize PC
-    PC.word = 0x0000;
+    // Initialize Gameboy cpu and memory
+    InitSystem();
 
     bool quit = false;      // Controls main emulation loop
     SDL_Event event;        // Captures user input
     short cycles = -1;      // Number of cycles consumed by a given instruction
-    BYTE opcode = 0x00;     // Code containing the instruction to execute 
+    BYTE opcode = 0x00;     // Code containing the instruction to execute
+    short divCount = 0;
     
     // Used to calculate timings accurate to the original hardware
     unsigned long long 
@@ -41,6 +45,10 @@ int main(int argc, char **argv)
     long double
         frameDelta = 0.0,   // Amount of time elapsed since frameStart
         cycleDelta = 0.0;   // Amount of time elapsed since cycleStart
+
+    short count = 0;
+
+    void (*execInstPtr)(FILE *, short *) = ExecuteInst;
 
     // Main emulation loop
     while(!quit)
@@ -53,19 +61,26 @@ int main(int argc, char **argv)
                 quit = true;
         }
 
-        cycleDelta = ((SDL_GetPerformanceCounter() - cycleStart) / (long double)SDL_GetPerformanceFrequency());
-        if(cycleDelta >= (cycles * SEC_PER_CYCLE))
-        {
-            cycleStart = SDL_GetPerformanceCounter();
-            opcode = FetchByte(output);
-            cycles = DecodeExecute(opcode, output);
-            fprintf(output, " <-> %d cycles\n", cycles);
-        }
+        // cycleDelta = ((SDL_GetPerformanceCounter() - cycleStart) / (long double)SDL_GetPerformanceFrequency());
+        // if(cycleDelta >= (cycles * SEC_PER_CYCLE))
+        // {
+        //     cycleStart = SDL_GetPerformanceCounter();
+        //     opcode = FetchByte(output);
+        //     cycles = DecodeExecute(opcode, output);
+        //     fprintf(output, " (%d cycles)\n", cycles);
+        // }
+        cycleStart = Timer(cycleStart, cycles * SEC_PER_CYCLE, execInstPtr, output, &cycles);
         
         frameDelta = ((SDL_GetPerformanceCounter() - frameStart) / (long double)SDL_GetPerformanceFrequency());
         if(frameDelta >= SEC_PER_FRAME)
         {
             frameStart = SDL_GetPerformanceCounter();
+            count++;
+            if(count == 60)
+            {
+                count = 0;
+                fprintf(output, "60th frame (about one second)\n");
+            }
             // Do graphics here
         }
     }
@@ -172,45 +187,68 @@ bool InitializeSDL(SDL_Window **window, SDL_Renderer **renderer, const unsigned 
 void InitSystem()
 {
     // Initialize registers
-    regAF.word = 0x01B0;
-    regBC.word = 0x0013;
-    regDE.word = 0x00D8;
-    regHL.word = 0x014D;
+    // regAF.word = 0x01B0;
+    // regBC.word = 0x0013;
+    // regDE.word = 0x00D8;
+    // regHL.word = 0x014D;
 
     // Initialize program counter and stack pointer
-    PC.word = 0x0100;
-    SP.word = 0xFFFE;
+    PC.word = 0x0000;
+    // SP.word = 0xFFFE;
 
     // Initialize RAM (I/0 Special Registers)
-    mainMemory[0xFF05] = 0x00;  // TIMA
-    mainMemory[0xFF06] = 0x00;  // TMA
-    mainMemory[0xFF07] = 0x00;  // TAC
-    mainMemory[0xFF10] = 0x80;  // NR10
-    mainMemory[0xFF11] = 0xBF;  // NR11
-    mainMemory[0xFF12] = 0xF3;  // NR12
-    mainMemory[0xFF14] = 0xBF;  // NR14
-    mainMemory[0xFF16] = 0x3F;  // NR21
-    mainMemory[0xFF17] = 0x00;  // NR22
-    mainMemory[0xFF19] = 0xBF;  // NR24
-    mainMemory[0xFF1A] = 0x7F;  // NR30
-    mainMemory[0xFF1B] = 0xFF;  // NR31
-    mainMemory[0xFF1C] = 0x9F;  // NR32
-    mainMemory[0xFF1E] = 0xBF;  // NR33
-    mainMemory[0xFF20] = 0xFF;  // NR41
-    mainMemory[0xFF21] = 0x00;  // NR42
-    mainMemory[0xFF22] = 0x00;  // NR43
-    mainMemory[0xFF23] = 0xBF;  // NR30
-    mainMemory[0xFF24] = 0x77;  // NR50
-    mainMemory[0xFF25] = 0xF3;  // NR51
-    mainMemory[0xFF26] = 0xF1;  // NR52
-    mainMemory[0xFF40] = 0x91;  // LCDC
-    mainMemory[0xFF42] = 0x00;  // SCY
-    mainMemory[0xFF43] = 0x00;  // SCX
-    mainMemory[0xFF45] = 0x00;  // LYC
-    mainMemory[0xFF47] = 0xFC;  // BGP
-    mainMemory[0xFF48] = 0xFF;  // OBP0
-    mainMemory[0xFF49] = 0xFF;  // OBP1
-    mainMemory[0xFF4A] = 0x00;  // WY
-    mainMemory[0xFF4B] = 0x00;  // WX
-    mainMemory[0xFFFF] = 0x00;  // IE
+    mainMemory[REG_DIV] = 0x00;
+
+    // mainMemory[0xFF05] = 0x00;  // TIMA
+    // mainMemory[0xFF06] = 0x00;  // TMA
+    // mainMemory[0xFF07] = 0x00;  // TAC
+    // mainMemory[0xFF10] = 0x80;  // NR10
+    // mainMemory[0xFF11] = 0xBF;  // NR11
+    // mainMemory[0xFF12] = 0xF3;  // NR12
+    // mainMemory[0xFF14] = 0xBF;  // NR14
+    // mainMemory[0xFF16] = 0x3F;  // NR21
+    // mainMemory[0xFF17] = 0x00;  // NR22
+    // mainMemory[0xFF19] = 0xBF;  // NR24
+    // mainMemory[0xFF1A] = 0x7F;  // NR30
+    // mainMemory[0xFF1B] = 0xFF;  // NR31
+    // mainMemory[0xFF1C] = 0x9F;  // NR32
+    // mainMemory[0xFF1E] = 0xBF;  // NR33
+    // mainMemory[0xFF20] = 0xFF;  // NR41
+    // mainMemory[0xFF21] = 0x00;  // NR42
+    // mainMemory[0xFF22] = 0x00;  // NR43
+    // mainMemory[0xFF23] = 0xBF;  // NR30
+    // mainMemory[0xFF24] = 0x77;  // NR50
+    // mainMemory[0xFF25] = 0xF3;  // NR51
+    // mainMemory[0xFF26] = 0xF1;  // NR52
+    // mainMemory[0xFF40] = 0x91;  // LCDC
+    // mainMemory[0xFF42] = 0x00;  // SCY
+    // mainMemory[0xFF43] = 0x00;  // SCX
+    // mainMemory[0xFF45] = 0x00;  // LYC
+    // mainMemory[0xFF47] = 0xFC;  // BGP
+    // mainMemory[0xFF48] = 0xFF;  // OBP0
+    // mainMemory[0xFF49] = 0xFF;  // OBP1
+    // mainMemory[0xFF4A] = 0x00;  // WY
+    // mainMemory[0xFF4B] = 0x00;  // WX
+    // mainMemory[0xFFFF] = 0x00;  // IE
+}
+
+unsigned long long Timer(unsigned long long begin, long double threshold, void (*callMe)(FILE *, short *), FILE *output, short *cycles)
+{
+    long double delta = ((SDL_GetPerformanceCounter() - begin) / (long double)SDL_GetPerformanceFrequency());
+    if(delta >= threshold)
+    {
+        begin = SDL_GetPerformanceCounter();
+        (*callMe)(output, cycles);
+    }
+    return begin;
+}
+
+void ExecuteInst(FILE *output, short *cycles)
+{
+    BYTE opcode = 0x00;
+    *cycles = 0;
+
+    opcode = FetchByte(output);
+    *cycles = DecodeExecute(opcode, output);
+    fprintf(output, " (%d cycles)\n", *cycles);
 }
