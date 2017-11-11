@@ -35,7 +35,7 @@ static const long double SEC_PER_FRAME = 1.0 / VERTICAL_SYNC;
 #define REG_TMA  0xff06
 #define REG_TAC  0xff07
 
-static const long double SEC_PER_CYCLE = 1.0;// / CLOCK_SPEED;
+static const long double SEC_PER_CYCLE = 1.0 / CLOCK_SPEED;
 
 // Memory Constants
 #define MAIN_MEM_SIZE 0x10000

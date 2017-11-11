@@ -4,11 +4,12 @@
 #include "gbCPU.h"
 
 bool InputIsValid(int argc, char **argv, FILE **output);
-bool InitializeSDL(SDL_Window **window, SDL_Renderer **renderer, const unsigned int MULTIPLIER);
+bool InitializeSDL(SDL_Window **window, SDL_Renderer **renderer, const unsigned short MULTIPLIER);
 void InitSystem();
 
-unsigned long long Timer(unsigned long long begin, long double threshold, void (*callMe)(FILE *, short *), FILE *output, short *cycles);
-void ExecuteInst(FILE *output, short *cycles);
+Uint64 Timer(Uint64 begin, long double threshold, void (*callMe)(void **), void **params);
+void ExecuteInst(void **params);
+void DrawGraphics(void **params);
 
 int main(int argc, char **argv)
 {
@@ -20,7 +21,7 @@ int main(int argc, char **argv)
         return -1;
 
     // Integer multiple for graphics
-    const unsigned int MULTIPLIER = atoi(argv[2]);
+    const unsigned short MULTIPLIER = atoi(argv[2]);
 
     SDL_Window *window = NULL;
     SDL_Renderer *renderer = NULL;
@@ -35,20 +36,20 @@ int main(int argc, char **argv)
     bool quit = false;      // Controls main emulation loop
     SDL_Event event;        // Captures user input
     short cycles = -1;      // Number of cycles consumed by a given instruction
-    BYTE opcode = 0x00;     // Code containing the instruction to execute
-    short divCount = 0;
     
     // Used to calculate timings accurate to the original hardware
-    unsigned long long 
-        frameStart = 0,     // Time at beginning of frame
-        cycleStart = 0;     // Time at beginning of cycle
-    long double
-        frameDelta = 0.0,   // Amount of time elapsed since frameStart
-        cycleDelta = 0.0;   // Amount of time elapsed since cycleStart
+    Uint64 frameStart = 0;  // Time at beginning of frame
+    Uint64 cycleStart = 0;  // Time at beginning of cycle
 
     short count = 0;
 
-    void (*execInstPtr)(FILE *, short *) = ExecuteInst;
+    // Point function pointer to ExecuteInst() and set parameters to pass
+    const void (*executeInstPtr)(void **params) = ExecuteInst;
+    void *executeInstParams[] = { &cycles, output };
+    
+    // Point function pointer to DrawGraphics() and set parameters to pass
+    const void (*drawGraphicsPtr)(void **params) = DrawGraphics;
+    void *drawGraphicsParams[] = { &count, output };
 
     // Main emulation loop
     while(!quit)
@@ -61,33 +62,18 @@ int main(int argc, char **argv)
                 quit = true;
         }
 
-        // cycleDelta = ((SDL_GetPerformanceCounter() - cycleStart) / (long double)SDL_GetPerformanceFrequency());
-        // if(cycleDelta >= (cycles * SEC_PER_CYCLE))
-        // {
-        //     cycleStart = SDL_GetPerformanceCounter();
-        //     opcode = FetchByte(output);
-        //     cycles = DecodeExecute(opcode, output);
-        //     fprintf(output, " (%d cycles)\n", cycles);
-        // }
-        cycleStart = Timer(cycleStart, cycles * SEC_PER_CYCLE, execInstPtr, output, &cycles);
+        // Call ExecuteInst when the threshold of cycles * SEC_PER_CYCLE has been passed
+        cycleStart = Timer(cycleStart, cycles * SEC_PER_CYCLE, executeInstPtr, executeInstParams);
         
-        frameDelta = ((SDL_GetPerformanceCounter() - frameStart) / (long double)SDL_GetPerformanceFrequency());
-        if(frameDelta >= SEC_PER_FRAME)
-        {
-            frameStart = SDL_GetPerformanceCounter();
-            count++;
-            if(count == 60)
-            {
-                count = 0;
-                fprintf(output, "60th frame (about one second)\n");
-            }
-            // Do graphics here
-        }
+        // Call DrawGraphics when the threshold of SEC_PER_FRAME has been passed
+        frameStart = Timer(frameStart, SEC_PER_FRAME, drawGraphicsPtr, drawGraphicsParams);
     }
 
+    // Close the output file if one was specified
     if(output != stdout && output != NULL)
         fclose(output);
 
+    // Free dynamically allocated game pak
     free(gamePakMem);
 
     return 0;
@@ -148,7 +134,7 @@ bool InputIsValid(int argc, char **argv, FILE **output)
     return true;
 }
 
-bool InitializeSDL(SDL_Window **window, SDL_Renderer **renderer, const unsigned int MULTIPLIER)
+bool InitializeSDL(SDL_Window **window, SDL_Renderer **renderer, const unsigned short MULTIPLIER)
 {
     // Initialize SDL
     if(SDL_Init(SDL_INIT_VIDEO) < 0)
@@ -232,23 +218,47 @@ void InitSystem()
     // mainMemory[0xFFFF] = 0x00;  // IE
 }
 
-unsigned long long Timer(unsigned long long begin, long double threshold, void (*callMe)(FILE *, short *), FILE *output, short *cycles)
+// Timer takes a timestamp (parameter begin) and calls arbitrary function callMe when a particular
+// amount of time has passed
+Uint64 Timer(Uint64 begin, long double threshold, void (*callMe)(void **), void **params)
 {
+    // Set delta to the amount of time since begin
     long double delta = ((SDL_GetPerformanceCounter() - begin) / (long double)SDL_GetPerformanceFrequency());
+    
+    // If this amount of time passes the threshold, call the function callMe
     if(delta >= threshold)
     {
+        // This is a new event; record the beginning of this event
         begin = SDL_GetPerformanceCounter();
-        (*callMe)(output, cycles);
+        (*callMe)(params);
     }
+
     return begin;
 }
 
-void ExecuteInst(FILE *output, short *cycles)
+// Execute a single cpu instruction and write out the number of cycles consumed
+void ExecuteInst(void **params)
 {
+    short *cycles = (short *)params[0];
+    FILE *output = (FILE *)params[1];
     BYTE opcode = 0x00;
-    *cycles = 0;
 
     opcode = FetchByte(output);
     *cycles = DecodeExecute(opcode, output);
     fprintf(output, " (%d cycles)\n", *cycles);
+}
+
+// Draw a single frame of graphics to the window
+void DrawGraphics(void **params)
+{
+    short *count = (short *)params[0];
+    FILE *output = (FILE *)params[1];
+
+    (*count)++;
+    if(*count == 60)
+    {
+        *count = 0;
+        fprintf(output, "60th frame (about one second)\n");
+    }
+    // Do graphics here
 }
