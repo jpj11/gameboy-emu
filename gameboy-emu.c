@@ -1,15 +1,21 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <SDL2/SDL.h>
+#include <pthread.h>
 #include "gbCPU.h"
 
 bool InputIsValid(int argc, char **argv, FILE **output);
 bool InitializeSDL(SDL_Window **window, SDL_Renderer **renderer, const unsigned short MULTIPLIER);
-void InitSystem();
+
+void *EmulateCPU(void *args);
+void *EmulateGraphics(void *args);
 
 Uint64 Timer(Uint64 begin, long double threshold, void (*callMe)(void **), void **params);
 void ExecuteInst(void **params);
 void DrawGraphics(void **params);
+void IncrementDiv(void **params);
+
+pthread_barrier_t barrier;
 
 int main(int argc, char **argv)
 {
@@ -35,23 +41,18 @@ int main(int argc, char **argv)
 
     bool quit = false;      // Controls main emulation loop
     SDL_Event event;        // Captures user input
-    short cycles = -1;      // Number of cycles consumed by a given instruction
-    
-    // Used to calculate timings accurate to the original hardware
-    Uint64 frameStart = 0;  // Time at beginning of frame
-    Uint64 cycleStart = 0;  // Time at beginning of cycle
 
-    short count = 0;
+    pthread_t cpuThread, graphicsThread;
+    pthread_barrier_init(&barrier, NULL, 3);
 
-    // Point function pointer to ExecuteInst() and set parameters to pass
-    const void (*executeInstPtr)(void **params) = ExecuteInst;
-    void *executeInstParams[] = { &cycles, output };
-    
-    // Point function pointer to DrawGraphics() and set parameters to pass
-    const void (*drawGraphicsPtr)(void **params) = DrawGraphics;
-    void *drawGraphicsParams[] = { &count, output };
+    void *emulateCPUArgs[] = { &quit, output };
+    pthread_create(&cpuThread, NULL, EmulateCPU, emulateCPUArgs);
 
-    // Main emulation loop
+    void *emulateGraphicsArgs[] = { &quit, output };
+    pthread_create(&graphicsThread, NULL, EmulateGraphics, emulateGraphicsArgs);
+
+    // User input loop
+    pthread_barrier_wait(&barrier);
     while(!quit)
     {
         while(SDL_PollEvent(&event) != 0)
@@ -61,13 +62,11 @@ int main(int argc, char **argv)
             if(event.type == SDL_QUIT)
                 quit = true;
         }
-
-        // Call ExecuteInst when the threshold of cycles * SEC_PER_CYCLE has been passed
-        cycleStart = Timer(cycleStart, cycles * SEC_PER_CYCLE, executeInstPtr, executeInstParams);
-        
-        // Call DrawGraphics when the threshold of SEC_PER_FRAME has been passed
-        frameStart = Timer(frameStart, SEC_PER_FRAME, drawGraphicsPtr, drawGraphicsParams);
     }
+
+    pthread_join(cpuThread, NULL);
+    pthread_join(graphicsThread, NULL);
+    pthread_barrier_destroy(&barrier);
 
     // Close the output file if one was specified
     if(output != stdout && output != NULL)
@@ -169,53 +168,42 @@ bool InitializeSDL(SDL_Window **window, SDL_Renderer **renderer, const unsigned 
     return true;
 }
 
-// (http://bgb.bircd.org/pandocs.htm#powerupsequence)
-void InitSystem()
+void *EmulateCPU(void *args)
 {
-    // Initialize registers
-    // regAF.word = 0x01B0;
-    // regBC.word = 0x0013;
-    // regDE.word = 0x00D8;
-    // regHL.word = 0x014D;
+    void **params = (void **)args;
+    bool *quit = (bool *)params[0];
+    FILE *output = (FILE *)params[1];
 
-    // Initialize program counter and stack pointer
-    PC.word = 0x0000;
-    // SP.word = 0xFFFE;
+    Uint64 cycleStart = 0;
+    short cycles = 0;
 
-    // Initialize RAM (I/0 Special Registers)
-    mainMemory[REG_DIV] = 0x00;
+    // Point function pointer to ExecuteInst() and set parameters to pass
+    const void (*executeInstPtr)(void **params) = ExecuteInst;
+    void *executeInstParams[] = { &cycles, output };
 
-    // mainMemory[0xFF05] = 0x00;  // TIMA
-    // mainMemory[0xFF06] = 0x00;  // TMA
-    // mainMemory[0xFF07] = 0x00;  // TAC
-    // mainMemory[0xFF10] = 0x80;  // NR10
-    // mainMemory[0xFF11] = 0xBF;  // NR11
-    // mainMemory[0xFF12] = 0xF3;  // NR12
-    // mainMemory[0xFF14] = 0xBF;  // NR14
-    // mainMemory[0xFF16] = 0x3F;  // NR21
-    // mainMemory[0xFF17] = 0x00;  // NR22
-    // mainMemory[0xFF19] = 0xBF;  // NR24
-    // mainMemory[0xFF1A] = 0x7F;  // NR30
-    // mainMemory[0xFF1B] = 0xFF;  // NR31
-    // mainMemory[0xFF1C] = 0x9F;  // NR32
-    // mainMemory[0xFF1E] = 0xBF;  // NR33
-    // mainMemory[0xFF20] = 0xFF;  // NR41
-    // mainMemory[0xFF21] = 0x00;  // NR42
-    // mainMemory[0xFF22] = 0x00;  // NR43
-    // mainMemory[0xFF23] = 0xBF;  // NR30
-    // mainMemory[0xFF24] = 0x77;  // NR50
-    // mainMemory[0xFF25] = 0xF3;  // NR51
-    // mainMemory[0xFF26] = 0xF1;  // NR52
-    // mainMemory[0xFF40] = 0x91;  // LCDC
-    // mainMemory[0xFF42] = 0x00;  // SCY
-    // mainMemory[0xFF43] = 0x00;  // SCX
-    // mainMemory[0xFF45] = 0x00;  // LYC
-    // mainMemory[0xFF47] = 0xFC;  // BGP
-    // mainMemory[0xFF48] = 0xFF;  // OBP0
-    // mainMemory[0xFF49] = 0xFF;  // OBP1
-    // mainMemory[0xFF4A] = 0x00;  // WY
-    // mainMemory[0xFF4B] = 0x00;  // WX
-    // mainMemory[0xFFFF] = 0x00;  // IE
+    pthread_barrier_wait(&barrier);
+    while(!(*quit))
+        cycleStart = Timer(cycleStart, cycles * SEC_PER_CYCLE, executeInstPtr, executeInstParams);
+    return NULL;
+}
+
+void *EmulateGraphics(void *args)
+{
+    void **params = (void **)args;
+    bool *quit = (bool *)params[0];
+    FILE *output = (FILE *)params[1];
+
+    Uint64 frameStart = 0;
+    short count = 0;
+
+    // Point function pointer to DrawGraphics() and set parameters to pass
+    const void (*drawGraphicsPtr)(void **params) = DrawGraphics;
+    void *drawGraphicsParams[] = { &count, output };
+
+    pthread_barrier_wait(&barrier);
+    while(!(*quit))
+        frameStart = Timer(frameStart, SEC_PER_FRAME, drawGraphicsPtr, drawGraphicsParams);
+    return NULL;
 }
 
 // Timer takes a timestamp (parameter begin) and calls arbitrary function callMe when a particular
@@ -232,7 +220,6 @@ Uint64 Timer(Uint64 begin, long double threshold, void (*callMe)(void **), void 
         begin = SDL_GetPerformanceCounter();
         (*callMe)(params);
     }
-
     return begin;
 }
 
@@ -261,4 +248,13 @@ void DrawGraphics(void **params)
         fprintf(output, "60th frame (about one second)\n");
     }
     // Do graphics here
+}
+
+// Increment the DIV register at the appropriate time
+void IncrementDiv(void **params)
+{
+    FILE *output = (FILE *)params[1];
+
+    mainMemory[REG_DIV] += 1;
+    fprintf(output, "DIV!\n");
 }
