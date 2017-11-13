@@ -246,7 +246,7 @@ void *ExecuteInst(void *params)
     
     BYTE opcode = 0x00;             // Opcode representing the instruction to be executed
     static short divCounter = 0;    // Counts the cycles between div register increments
-    static short timaCounter = 0;   // Counts the cycles between time register increments
+    static short timaCounter = 0;   // Counts the cycles between tima register increments
 
     // Fetch, decode and execute instruction
     opcode = FetchByte(output);
@@ -270,13 +270,29 @@ void *ExecuteInst(void *params)
             if(mainMemory[REG_TIMA] == 0xff)
             {
                 mainMemory[REG_TIMA] = mainMemory[REG_TMA];
-                // Interrupt here!
+                RequestInterrupt(timer);
             }
             else
                 mainMemory[REG_TIMA] += 1;
 
             fprintf(output, "REG_TIMA++\n");
             timaCounter = 0;
+        }
+    }
+
+    // If master interrupt enable flag is true and interrupts are requested
+    if(IME && mainMemory[REG_IF])
+    {
+        enum interrupt toCheck;
+        for(toCheck = vblank; toCheck <= joypad; toCheck++)
+        {
+            if(IsRequested(toCheck) && IsEnabled(toCheck))
+            {
+                mainMemory[REG_IF] &= ~(1 << toCheck);
+                IME = false;
+
+                Call(INTERRUPT_VECTORS[toCheck]);
+            }
         }
     }
     

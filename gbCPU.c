@@ -5,6 +5,8 @@
 const long double SEC_PER_FRAME = 1.0 / VERTICAL_SYNC;
 const long double SEC_PER_CYCLE = 1.0 / CLOCK_SPEED;
 const short TIMA_SPEED[] = { TAC_ZERO, TAC_ONE, TAC_TWO, TAC_THREE };
+bool IME = true;
+const WORD INTERRUPT_VECTORS[] = { VBLANK_VECT, LCD_STAT_VECT, TIMER_VECT, SERIAL_VECT, JOYPAD_VECT };
 
 BYTE mainMemory[MAIN_MEM_SIZE] = 
     "\x31\xFE\xFF\xAF\x21\xFF\x9F\x32\xCB\x7C\x20\xFB\x21\x26\xFF\x0E"
@@ -39,7 +41,9 @@ void InitSystem()
     mainMemory[REG_TIMA] = 0x00;
     mainMemory[REG_TMA] = 0x00;
     mainMemory[REG_TAC] = 0x00;
+    
     mainMemory[REG_IE] = 0x00;
+    mainMemory[REG_IF] = 0x00;
 }
 
 // Fetch the next BYTE from memory at PC
@@ -87,6 +91,21 @@ void Write(BYTE *dest, BYTE src)
     }
 }
 
+void RequestInterrupt(enum interrupt requested)
+{
+    mainMemory[REG_IF] |= 1 << requested;
+}
+
+bool IsRequested(enum interrupt toCheck)
+{
+    return (mainMemory[REG_IF] >> toCheck) & 1;
+}
+
+bool IsEnabled(enum interrupt toCheck)
+{
+    return (mainMemory[REG_IE] >> toCheck) & 1;
+}
+
 
 // ========================== Load Instructions =========================== //
 
@@ -95,7 +114,7 @@ short LoadByte(BYTE *dest, enum operandType destType, BYTE src, enum operandType
 {
     // Load source into destination
     if(destType != reg || destType != immediate)
-        Write(*dest, src);
+        Write(dest, src);
     else
         *dest = src;
 

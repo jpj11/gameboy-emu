@@ -24,6 +24,8 @@ extern const long double SEC_PER_FRAME;
 #define CLOCK_SPEED 4194304
 extern const long double SEC_PER_CYCLE;
 extern const short TIMA_SPEED[];
+extern bool IME;
+extern const WORD INTERRUPT_VECTORS[];
 
 #define DIV_SPEED 256
 #define TAC_ZERO  1024
@@ -32,10 +34,20 @@ extern const short TIMA_SPEED[];
 #define TAC_THREE 256
 
 #define REG_P1   0xff00
+
 #define REG_DIV  0xff04
 #define REG_TIMA 0xff05
 #define REG_TMA  0xff06
 #define REG_TAC  0xff07
+
+#define REG_IE   0xffff
+#define REG_IF   0xff0f
+
+#define VBLANK_VECT   0x0040
+#define LCD_STAT_VECT 0x0048
+#define TIMER_VECT    0x0050
+#define SERIAL_VECT   0x0058
+#define JOYPAD_VECT   0x0060
 
 // The memory in a Gameboy cartridge
 BYTE *gamePakMem;
@@ -89,13 +101,26 @@ enum cpuFlag
     carry = 4
 };
 
+// Possible interrupts that can be raised
+enum interrupt
+{
+    vblank,
+    lcd_stat,
+    timer,
+    serial,
+    joypad
+};
+
 // Primary execution functions
 void InitSystem();
 BYTE FetchByte(FILE *output);
 WORD FetchWord(FILE *output);
 short DecodeExecute(BYTE opcode, FILE *output);
 
-bool Write(BYTE *dest, BYTE src);
+void Write(BYTE *dest, BYTE src);
+void RequestInterrupt(enum interrupt requested);
+bool IsRequested(enum interrupt toCheck);
+bool IsEnabled(enum interrupt toCheck);
 
 // Load instructions
 short LoadByte(BYTE *dest, enum operandType destType, BYTE src, enum operandType srcType);
