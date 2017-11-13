@@ -4,6 +4,7 @@
 
 const long double SEC_PER_FRAME = 1.0 / VERTICAL_SYNC;
 const long double SEC_PER_CYCLE = 1.0 / CLOCK_SPEED;
+const short TIMA_SPEED[] = { TAC_ZERO, TAC_ONE, TAC_TWO, TAC_THREE };
 
 BYTE mainMemory[MAIN_MEM_SIZE] = 
     "\x31\xFE\xFF\xAF\x21\xFF\x9F\x32\xCB\x7C\x20\xFB\x21\x26\xFF\x0E"
@@ -35,6 +36,10 @@ void InitSystem()
 
     // Initialize RAM (I/0 Special Registers)
     mainMemory[REG_DIV] = 0x00;
+    mainMemory[REG_TIMA] = 0x00;
+    mainMemory[REG_TMA] = 0x00;
+    mainMemory[REG_TAC] = 0x00;
+    mainMemory[REG_IE] = 0x00;
 }
 
 // Fetch the next BYTE from memory at PC
@@ -69,6 +74,19 @@ void UnsetFlag(enum cpuFlag flag)
     regAF.lo &= ~(1 << flag);
 }
 
+void Write(BYTE *dest, BYTE src)
+{
+    if(dest < &mainMemory[0] || dest > &mainMemory[MAIN_MEM_SIZE - 1])
+        return;
+    else
+    {
+        if(dest == &mainMemory[REG_DIV])
+            *dest = 0x00;
+        else
+            *dest = src;
+    }
+}
+
 
 // ========================== Load Instructions =========================== //
 
@@ -76,8 +94,8 @@ void UnsetFlag(enum cpuFlag flag)
 short LoadByte(BYTE *dest, enum operandType destType, BYTE src, enum operandType srcType)
 {
     // Load source into destination
-    if(dest == &mainMemory[REG_DIV])
-        *dest = 0x00;
+    if(destType != reg || destType != immediate)
+        Write(*dest, src);
     else
         *dest = src;
 

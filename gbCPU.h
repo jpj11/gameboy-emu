@@ -23,6 +23,7 @@ extern const long double SEC_PER_FRAME;
 // CPU Constants
 #define CLOCK_SPEED 4194304
 extern const long double SEC_PER_CYCLE;
+extern const short TIMA_SPEED[];
 
 #define DIV_SPEED 256
 #define TAC_ZERO  1024
@@ -93,6 +94,8 @@ void InitSystem();
 BYTE FetchByte(FILE *output);
 WORD FetchWord(FILE *output);
 short DecodeExecute(BYTE opcode, FILE *output);
+
+bool Write(BYTE *dest, BYTE src);
 
 // Load instructions
 short LoadByte(BYTE *dest, enum operandType destType, BYTE src, enum operandType srcType);

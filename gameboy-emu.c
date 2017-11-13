@@ -246,6 +246,7 @@ void *ExecuteInst(void *params)
     
     BYTE opcode = 0x00;             // Opcode representing the instruction to be executed
     static short divCounter = 0;    // Counts the cycles between div register increments
+    static short timaCounter = 0;   // Counts the cycles between time register increments
 
     // Fetch, decode and execute instruction
     opcode = FetchByte(output);
@@ -257,10 +258,28 @@ void *ExecuteInst(void *params)
     if(divCounter >= DIV_SPEED)
     {
         mainMemory[REG_DIV] += 1;
-        fprintf(output, "DIV!\n");
+        fprintf(output, "REG_DIV++\n");
         divCounter = 0;
     }
 
+    if(mainMemory[REG_TAC] & 0x04)
+    {
+        timaCounter += *cycles;
+        if(timaCounter >= TIMA_SPEED[mainMemory[REG_TAC] & 0x03])
+        {
+            if(mainMemory[REG_TIMA] == 0xff)
+            {
+                mainMemory[REG_TIMA] = mainMemory[REG_TMA];
+                // Interrupt here!
+            }
+            else
+                mainMemory[REG_TIMA] += 1;
+
+            fprintf(output, "REG_TIMA++\n");
+            timaCounter = 0;
+        }
+    }
+    
     return NULL;
 }
 
