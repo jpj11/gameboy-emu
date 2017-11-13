@@ -24,9 +24,7 @@ extern const long double SEC_PER_FRAME;
 #define CLOCK_SPEED 4194304
 extern const long double SEC_PER_CYCLE;
 
-#define DIV_SPEED 16384
-extern const long double SEC_PER_DIV;
-
+#define DIV_SPEED 256
 #define TAC_ZERO  1024
 #define TAC_ONE   16
 #define TAC_TWO   64

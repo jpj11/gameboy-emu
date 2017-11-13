@@ -3,8 +3,7 @@
 #include "gbCPU.h"
 
 const long double SEC_PER_FRAME = 1.0 / VERTICAL_SYNC;
-const long double SEC_PER_CYCLE = 1.0;// / CLOCK_SPEED;
-const long double SEC_PER_DIV = 1.0 / DIV_SPEED;
+const long double SEC_PER_CYCLE = 1.0 / CLOCK_SPEED;
 
 BYTE mainMemory[MAIN_MEM_SIZE] = 
     "\x31\xFE\xFF\xAF\x21\xFF\x9F\x32\xCB\x7C\x20\xFB\x21\x26\xFF\x0E"
@@ -77,7 +76,10 @@ void UnsetFlag(enum cpuFlag flag)
 short LoadByte(BYTE *dest, enum operandType destType, BYTE src, enum operandType srcType)
 {
     // Load source into destination
-    *dest = src;
+    if(dest == &mainMemory[REG_DIV])
+        *dest = 0x00;
+    else
+        *dest = src;
 
     // Return the appropriate number of cycles
     if(destType == reg && srcType == reg)
