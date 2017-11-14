@@ -302,14 +302,14 @@ void *ExecuteInst(void *params)
     *cycles = DecodeExecute(opcode, output);
     fprintf(output, " (%d cycles)\n", *cycles);
 
-    // After DIV_SPEED cycles increment the div register
-    divCounter += *cycles;
-    if(divCounter >= DIV_SPEED)
-    {
-        mainMemory[REG_DIV] += 1;
-        fprintf(output, "REG_DIV++\n");
-        divCounter = 0;
-    }
+    // // After DIV_SPEED cycles increment the div register
+    // divCounter += *cycles;
+    // if(divCounter >= DIV_SPEED)
+    // {
+    //     mainMemory[REG_DIV] += 1;
+    //     fprintf(output, "REG_DIV++\n");
+    //     divCounter = 0;
+    // }
 
     // if(mainMemory[REG_TAC] & 0x04)
     // {
