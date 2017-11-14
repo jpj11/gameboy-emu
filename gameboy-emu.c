@@ -4,15 +4,17 @@
 #include <pthread.h>
 #include "gbCPU.h"
 
-#define NUM_BARRIER_THREADS 3
+#define NUM_BARRIER_THREADS 4
 
 bool InputIsValid(int argc, char **argv, FILE **output);
 bool InitializeSDL(SDL_Window **window, SDL_Renderer **renderer, const unsigned short MULTIPLIER);
 
 void *EmulateCPU(void *params);
 void *EmulateGraphics(void *params);
+void *EmulateInput(void *params);
 
 Uint64 Timer(Uint64 begin, long double threshold, void *(*callMe)(void *), void *params);
+void *IncrementCounters(void *params);
 void *ExecuteInst(void *params);
 void *DrawGraphics(void *params);
 
@@ -44,7 +46,7 @@ int main(int argc, char **argv)
     SDL_Event event;        // Captures user input
 
     // Declare threads and initialize barrier
-    pthread_t cpuThread, graphicsThread;
+    pthread_t cpuThread, graphicsThread, inputThread;
     pthread_barrier_init(&barrier, NULL, NUM_BARRIER_THREADS);
 
     // Create and use thread to emulate cpu in parallel
@@ -55,22 +57,29 @@ int main(int argc, char **argv)
     void *emulateGraphicsArgs[] = { &quit, output };
     pthread_create(&graphicsThread, NULL, EmulateGraphics, emulateGraphicsArgs);
 
-    // Main thread emulates user input
+    // Create and use thread to emulate user input in parallel
+    void *emulateInputArgs[] = { &quit, &event };
+    pthread_create(&inputThread, NULL, EmulateInput, emulateInputArgs);
+
+    int frameCounter = 0;
+    short lineCounter = 0;
+    short cycleCounter = 0;
+    short divCounter = 0;
+    short timaCounter = 0;
+
+    Uint64 clockStart = 0;
+
+    void *(*incrementCountersPtr)(void *params) = IncrementCounters;
+    void *incrementCountersArgs[] = { &frameCounter, &lineCounter, &cycleCounter, &divCounter, &timaCounter };
+
     pthread_barrier_wait(&barrier);
     while(!quit)
-    {
-        while(SDL_PollEvent(&event) != 0)
-        {
-            // Do input here
-
-            if(event.type == SDL_QUIT)
-                quit = true;
-        }
-    }
+        clockStart = Timer(clockStart, SEC_PER_CYCLE, incrementCountersPtr, incrementCountersArgs);
 
     // When user quits join separate threads and destroy barrier
     pthread_join(cpuThread, NULL);
     pthread_join(graphicsThread, NULL);
+    pthread_join(inputThread, NULL);
     pthread_barrier_destroy(&barrier);
 
     // Close the output file if one was specified
@@ -219,6 +228,26 @@ void *EmulateGraphics(void *params)
     return NULL;
 }
 
+void *EmulateInput(void *params)
+{
+    void **paramList = (void **)params;
+    bool *quit = (bool *)paramList[0];
+    SDL_Event *event = (SDL_Event *)paramList[1];
+
+    pthread_barrier_wait(&barrier);
+    while(!(*quit))
+    {
+        while(SDL_PollEvent(event) != 0)
+        {
+            // Do input here
+
+            if((*event).type == SDL_QUIT)
+                *quit = true;
+        }
+    }
+    return NULL;
+}
+
 // Timer takes a timestamp (parameter begin) and calls arbitrary function callMe when a particular
 // amount of time has passed
 Uint64 Timer(Uint64 begin, long double threshold, void *(*callMe)(void *), void *params)
@@ -234,6 +263,26 @@ Uint64 Timer(Uint64 begin, long double threshold, void *(*callMe)(void *), void 
         (*callMe)(params);
     }
     return begin;
+}
+
+void *IncrementCounters(void *params)
+{
+    // Fetch actual parameters from params
+    void **paramList = (void **)params;
+    
+    int *frameCounter = (int *)paramList[0];
+    short *lineCounter = (short *)paramList[1];
+    short *cycleCounter = (short *)paramList[2];
+    short *divCounter = (short *)paramList[3];
+    short *timaCounter = (short *)paramList[4];
+
+    *frameCounter++;
+    *lineCounter++;
+    *cycleCounter++;
+    *divCounter++;
+    *timaCounter++;
+
+    return NULL;
 }
 
 // Execute a single cpu instruction and write out the number of cycles consumed
@@ -262,39 +311,39 @@ void *ExecuteInst(void *params)
         divCounter = 0;
     }
 
-    if(mainMemory[REG_TAC] & 0x04)
-    {
-        timaCounter += *cycles;
-        if(timaCounter >= TIMA_SPEED[mainMemory[REG_TAC] & 0x03])
-        {
-            if(mainMemory[REG_TIMA] == 0xff)
-            {
-                mainMemory[REG_TIMA] = mainMemory[REG_TMA];
-                RequestInterrupt(timer);
-            }
-            else
-                mainMemory[REG_TIMA] += 1;
+    // if(mainMemory[REG_TAC] & 0x04)
+    // {
+    //     timaCounter += *cycles;
+    //     if(timaCounter >= TIMA_SPEED[mainMemory[REG_TAC] & 0x03])
+    //     {
+    //         if(mainMemory[REG_TIMA] == 0xff)
+    //         {
+    //             mainMemory[REG_TIMA] = mainMemory[REG_TMA];
+    //             RequestInterrupt(timer);
+    //         }
+    //         else
+    //             mainMemory[REG_TIMA] += 1;
 
-            fprintf(output, "REG_TIMA++\n");
-            timaCounter = 0;
-        }
-    }
+    //         fprintf(output, "REG_TIMA++\n");
+    //         timaCounter = 0;
+    //     }
+    // }
 
-    // If master interrupt enable flag is true and interrupts are requested
-    if(IME && mainMemory[REG_IF])
-    {
-        enum interrupt toCheck;
-        for(toCheck = vblank; toCheck <= joypad; toCheck++)
-        {
-            if(IsRequested(toCheck) && IsEnabled(toCheck))
-            {
-                mainMemory[REG_IF] &= ~(1 << toCheck);
-                IME = false;
+    // // If master interrupt enable flag is true and interrupts are requested
+    // if(IME && mainMemory[REG_IF])
+    // {
+    //     enum interrupt toCheck;
+    //     for(toCheck = vblank; toCheck <= joypad; toCheck++)
+    //     {
+    //         if(IsRequested(toCheck) && IsEnabled(toCheck))
+    //         {
+    //             mainMemory[REG_IF] &= ~(1 << toCheck);
+    //             IME = false;
 
-                Call(INTERRUPT_VECTORS[toCheck]);
-            }
-        }
-    }
+    //             Call(INTERRUPT_VECTORS[toCheck]);
+    //         }
+    //     }
+    // }
     
     return NULL;
 }
