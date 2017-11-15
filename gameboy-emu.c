@@ -11,7 +11,7 @@ bool InitializeSDL(SDL_Window **window, SDL_Renderer **renderer, const unsigned 
 
 void *EmulateCPU(void *params);
 void *EmulateGraphics(void *params);
-void *EmulateInput(void *params);
+void *EmulateClock(void *params);
 
 Uint64 Timer(Uint64 begin, long double threshold, void *(*callMe)(void *), void *params);
 void *IncrementCounters(void *params);
@@ -19,6 +19,14 @@ void *ExecuteInst(void *params);
 void *DrawGraphics(void *params);
 
 pthread_barrier_t barrier;
+pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
+pthread_cond_t condition = PTHREAD_COND_INITIALIZER;
+
+int frameCounter = 0;
+short lineCounter = 0;
+short cycleCounter = 0;
+short divCounter = 0;
+short timaCounter = 0;
 
 int main(int argc, char **argv)
 {
@@ -46,8 +54,12 @@ int main(int argc, char **argv)
     SDL_Event event;        // Captures user input
 
     // Declare threads and initialize barrier
-    pthread_t cpuThread, graphicsThread, inputThread;
+    pthread_t clockThread, cpuThread, graphicsThread;
     pthread_barrier_init(&barrier, NULL, NUM_BARRIER_THREADS);
+
+    // Create and use thread to emulate the cpu clock in parallel
+    void *emulateClockArgs[] = { &quit, &event };
+    pthread_create(&clockThread, NULL, EmulateClock, emulateClockArgs);
 
     // Create and use thread to emulate cpu in parallel
     void *emulateCPUArgs[] = { &quit, output };
@@ -57,29 +69,27 @@ int main(int argc, char **argv)
     void *emulateGraphicsArgs[] = { &quit, output };
     pthread_create(&graphicsThread, NULL, EmulateGraphics, emulateGraphicsArgs);
 
-    // Create and use thread to emulate user input in parallel
-    void *emulateInputArgs[] = { &quit, &event };
-    pthread_create(&inputThread, NULL, EmulateInput, emulateInputArgs);
+    //Uint64 clockStart = 0;
 
-    int frameCounter = 0;
-    short lineCounter = 0;
-    short cycleCounter = 0;
-    short divCounter = 0;
-    short timaCounter = 0;
-
-    Uint64 clockStart = 0;
-
-    void *(*incrementCountersPtr)(void *params) = IncrementCounters;
-    void *incrementCountersArgs[] = { &frameCounter, &lineCounter, &cycleCounter, &divCounter, &timaCounter };
+    //void *(*incrementCountersPtr)(void *params) = IncrementCounters;
+    // void *incrementCountersArgs[] = { &frameCounter, &lineCounter, &cycleCounter, &divCounter, &timaCounter };
 
     pthread_barrier_wait(&barrier);
     while(!quit)
-        clockStart = Timer(clockStart, SEC_PER_CYCLE, incrementCountersPtr, incrementCountersArgs);
+    {
+        while(SDL_PollEvent(&event) != 0)
+        {
+            // Do input here
+
+            if(event.type == SDL_QUIT)
+                quit = true;
+        }
+    }
 
     // When user quits join separate threads and destroy barrier
     pthread_join(cpuThread, NULL);
     pthread_join(graphicsThread, NULL);
-    pthread_join(inputThread, NULL);
+    pthread_join(clockThread, NULL);
     pthread_barrier_destroy(&barrier);
 
     // Close the output file if one was specified
@@ -190,18 +200,31 @@ void *EmulateCPU(void *params)
     bool *quit = (bool *)paramList[0];
     FILE *output = (FILE *)paramList[1];
 
-    Uint64 instStart = 0;   // Stores the timestamp of when an instruct begins
+    //Uint64 instStart = 0;   // Stores the timestamp of when an instruct begins
     short cycles = 0;       // The number of cycles consumed by an instruction
+    BYTE opcode = 0x00;  
 
-    // Point function pointer to ExecuteInst() and set parameters to pass
-    void *(*executeInstPtr)(void *params) = ExecuteInst;
-    void *executeInstArgs[] = { &cycles, output };
-
-    // Execute the next instruction at the appropriate time until emulation is ended
-    // Barrier ensures that cpu, graphics, and input threads begin emulation at the same time
     pthread_barrier_wait(&barrier);
-    while(!(*quit))
-        instStart = Timer(instStart, cycles * SEC_PER_CYCLE, executeInstPtr, executeInstArgs);
+    do
+    {
+        opcode = FetchByte(output);
+        cycles = DecodeExecute(opcode, output);
+        fprintf(output, " (%d cycles)\n", cycles);
+
+        while(cycleCounter < cycles);
+        cycleCounter = 0;
+
+    } while(!(*quit));
+
+    // // Point function pointer to ExecuteInst() and set parameters to pass
+    // void *(*executeInstPtr)(void *params) = ExecuteInst;
+    // void *executeInstArgs[] = { &cycles, output };
+
+    // // Execute the next instruction at the appropriate time until emulation is ended
+    // // Barrier ensures that cpu, graphics, and input threads begin emulation at the same time
+    // pthread_barrier_wait(&barrier);
+    // while(!(*quit))
+    //     instStart = Timer(instStart, cycles * SEC_PER_CYCLE, executeInstPtr, executeInstArgs);
     return NULL;
 }
 
@@ -213,38 +236,53 @@ void *EmulateGraphics(void *params)
     bool *quit = (bool *)paramList[0];
     FILE *output = (FILE *)paramList[1];
 
-    Uint64 frameStart = 0;  // Stores the timestamp of when a frame begins
+    //Uint64 frameStart = 0;  // Stores the timestamp of when a frame begins
     short count = 0;
 
     // Point function pointer to DrawGraphics() and set parameters to pass
-    void *(*drawGraphicsPtr)(void *params) = DrawGraphics;
-    void *drawGraphicsArgs[] = { &count, output };
+    //void *(*drawGraphicsPtr)(void *params) = DrawGraphics;
+    //void *drawGraphicsArgs[] = { &count, output };
 
     // Draw the next frame at the appropriate time until emulation is ended
     // Barrier ensures that cpu, graphics, and input threads begin emulation at the same time
     pthread_barrier_wait(&barrier);
-    while(!(*quit))
-        frameStart = Timer(frameStart, SEC_PER_FRAME, drawGraphicsPtr, drawGraphicsArgs);
+    do
+    {
+        count++;
+        if(count == 60)
+        {
+            count = 0;
+            fprintf(output, "60th frame (about one second)\n");
+        }
+
+        pthread_mutex_lock(&mutex);
+        while(frameCounter < CYCLES_PER_FRAME)
+        {
+            pthread_cond_wait(&condition, &mutex);
+        }
+        frameCounter = 0;
+        pthread_mutex_unlock(&mutex);
+
+    } while(!(*quit));
+    // while(!(*quit))
+    //     frameStart = Timer(frameStart, SEC_PER_FRAME, drawGraphicsPtr, drawGraphicsArgs);
     return NULL;
 }
 
-void *EmulateInput(void *params)
+void *EmulateClock(void *params)
 {
     void **paramList = (void **)params;
     bool *quit = (bool *)paramList[0];
-    SDL_Event *event = (SDL_Event *)paramList[1];
+    
+    Uint64 clockStart = 0;
+
+    // Point function pointer to DrawGraphics() and set parameters to pass
+    void *(*incrementCountersPtr)(void *params) = IncrementCounters;
 
     pthread_barrier_wait(&barrier);
     while(!(*quit))
-    {
-        while(SDL_PollEvent(event) != 0)
-        {
-            // Do input here
-
-            if((*event).type == SDL_QUIT)
-                *quit = true;
-        }
-    }
+        clockStart = Timer(clockStart, SEC_PER_CYCLE, incrementCountersPtr, NULL);
+    
     return NULL;
 }
 
@@ -267,20 +305,15 @@ Uint64 Timer(Uint64 begin, long double threshold, void *(*callMe)(void *), void 
 
 void *IncrementCounters(void *params)
 {
-    // Fetch actual parameters from params
-    void **paramList = (void **)params;
-    
-    int *frameCounter = (int *)paramList[0];
-    short *lineCounter = (short *)paramList[1];
-    short *cycleCounter = (short *)paramList[2];
-    short *divCounter = (short *)paramList[3];
-    short *timaCounter = (short *)paramList[4];
+    pthread_mutex_lock(&mutex);
+    frameCounter++;
+    if (frameCounter >= CYCLES_PER_FRAME) pthread_cond_broadcast(&condition);
+    pthread_mutex_unlock(&mutex);
 
-    *frameCounter++;
-    *lineCounter++;
-    *cycleCounter++;
-    *divCounter++;
-    *timaCounter++;
+    lineCounter++;
+    cycleCounter++;
+    divCounter++;
+    timaCounter++;
 
     return NULL;
 }
@@ -294,8 +327,8 @@ void *ExecuteInst(void *params)
     FILE *output = (FILE *)paramList[1];
     
     BYTE opcode = 0x00;             // Opcode representing the instruction to be executed
-    static short divCounter = 0;    // Counts the cycles between div register increments
-    static short timaCounter = 0;   // Counts the cycles between tima register increments
+    //static short divCounter = 0;    // Counts the cycles between div register increments
+    //static short timaCounter = 0;   // Counts the cycles between tima register increments
 
     // Fetch, decode and execute instruction
     opcode = FetchByte(output);
