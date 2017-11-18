@@ -16,6 +16,8 @@ void *IncrementCounters(void *params);
 void *ExecuteInst(void *params);
 void *DrawGraphics(void *params);
 
+bool Quit();
+
 volatile int frameCounter = 0;
 volatile short lineCounter = 0;
 volatile short cycleCounter = 0;
@@ -23,8 +25,7 @@ volatile short divCounter = 0;
 volatile short timaCounter = 0;
 
 pthread_barrier_t barrier;
-
-volatile bool requestExit = false;
+pthread_attr_t attribute;
 pthread_mutex_t exitLock;
 
 pthread_cond_t CPUCond;
@@ -61,39 +62,28 @@ int main(int argc, char **argv)
     //int status = 0;
 
     pthread_barrier_init(&barrier, NULL, 4);
+    pthread_attr_init(&attribute);
+    pthread_attr_setdetachstate(&attribute, PTHREAD_CREATE_DETACHED);
     pthread_mutex_init(&exitLock, NULL);
     
     pthread_mutex_init(&CPULock, NULL);
     pthread_cond_init(&CPUCond, NULL);
+
     pthread_mutex_init(&graphicsLock, NULL);
     pthread_cond_init(&graphicsCond, NULL);
 
-    pthread_t clockThread;
-    pthread_create(&clockThread, NULL, EmulateClock, NULL);
+    pthread_mutex_lock(&exitLock);
 
-    // Create and use thread to emulate the cpu clock in parallel
-    //void *emulateClockArgs[] = { &quit };
-    
+    pthread_t clockThread;
+    pthread_create(&clockThread, &attribute, EmulateClock, NULL);
+
     pthread_t CPUThread;
     void *emulateCPUArgs = (void *)output;
-    pthread_create(&CPUThread, NULL, EmulateCPU, emulateCPUArgs);
-
-    // // Create and use thread to emulate cpu in parallel
-    // void *emulateCPUArgs[] = { &quit, output };
-    // pthread_create(&cpuThread, NULL, EmulateCPU, emulateCPUArgs);
+    pthread_create(&CPUThread, &attribute, EmulateCPU, emulateCPUArgs);
 
     pthread_t graphicsThread;
     void *emulateGraphicsArgs = (void *)output;
-    pthread_create(&graphicsThread, NULL, EmulateGraphics, emulateGraphicsArgs);
-
-    // // Create and use thread to emulate graphics in parallel
-    // void *emulateGraphicsArgs[] = { &quit, output };
-    // pthread_create(&graphicsThread, NULL, EmulateGraphics, emulateGraphicsArgs);
-
-    //Uint64 clockStart = 0;
-
-    //void *(*incrementCountersPtr)(void *params) = IncrementCounters;
-    // void *incrementCountersArgs[] = { &frameCounter, &lineCounter, &cycleCounter, &divCounter, &timaCounter };
+    pthread_create(&graphicsThread, &attribute, EmulateGraphics, emulateGraphicsArgs);
 
     pthread_barrier_wait(&barrier);
     while(!quit)
@@ -106,17 +96,7 @@ int main(int argc, char **argv)
                 quit = true;
         }
     }
-    pthread_mutex_lock(&exitLock);
-    requestExit = true;
     pthread_mutex_unlock(&exitLock);
-
-    // When user quits join separate threads and destroy barrier
-    // pthread_join(clockThread, NULL);
-    // pthread_join(CPUThread, NULL);
-    // pthread_join(graphicsThread, NULL);
-    // pthread_join(cpuThread, NULL);
-    // pthread_join(graphicsThread, NULL);
-    // pthread_join(clockThread, NULL);
 
     pthread_cond_destroy(&graphicsCond);
     pthread_mutex_destroy(&graphicsLock);
@@ -227,29 +207,23 @@ bool InitializeSDL(SDL_Window **window, SDL_Renderer **renderer, const unsigned 
 
 void *EmulateClock(void *params)
 {
-    pthread_detach(pthread_self());
-    bool quit = false;
     Uint64 clockStart = 0;
 
     // Point function pointer to DrawGraphics() and set parameters to pass
     void *(*incrementCountersPtr)(void *params) = IncrementCounters;
 
     pthread_barrier_wait(&barrier);
-    while(!quit)
+    do
     {
         clockStart = Timer(clockStart, SEC_PER_CYCLE, incrementCountersPtr, NULL);
+    } while(!Quit());
 
-        pthread_mutex_lock(&exitLock);
-        quit = requestExit;
-        pthread_mutex_unlock(&exitLock);
-    }
     return NULL;
 }
 
 // Emulates the cpu by excuting instructions at the appropriate times
 void *EmulateCPU(void *params)
 {
-    pthread_detach(pthread_self());
     // Fetch actual parameters from params
     FILE *output = (FILE *)params;
 
@@ -257,10 +231,9 @@ void *EmulateCPU(void *params)
     // short cycles = 0;       // The number of cycles consumed by an instruction
     // short count = 0;
     BYTE opcode = 0x00;
-    bool quit = false;
 
     pthread_barrier_wait(&barrier);
-    while(!quit)
+    do
     {
         opcode = FetchByte(output);
 
@@ -284,11 +257,7 @@ void *EmulateCPU(void *params)
         }
         cycleCounter = 0;
         pthread_mutex_unlock(&CPULock);
-
-        pthread_mutex_lock(&exitLock);
-        quit = requestExit;
-        pthread_mutex_unlock(&exitLock);
-    }
+    } while(!Quit());
 
     // // Point function pointer to ExecuteInst() and set parameters to pass
     // void *(*executeInstPtr)(void *params) = ExecuteInst;
@@ -305,12 +274,10 @@ void *EmulateCPU(void *params)
 // Emulates graphical output by drawing frames at the appropriate times
 void *EmulateGraphics(void *params)
 {
-    pthread_detach(pthread_self());
     // Fetch actual parameters from params
     FILE *output = (FILE *)params;
 
     //Uint64 frameStart = 0;  // Stores the timestamp of when a frame begins
-    bool quit = false;
 
     // Point function pointer to DrawGraphics() and set parameters to pass
     //void *(*drawGraphicsPtr)(void *params) = DrawGraphics;
@@ -319,7 +286,7 @@ void *EmulateGraphics(void *params)
     // Draw the next frame at the appropriate time until emulation is ended
     // Barrier ensures that cpu, graphics, and input threads begin emulation at the same time
     pthread_barrier_wait(&barrier);
-    while(!quit)
+    do
     {
         fprintf(output, "\n\n\n\n\n60th frame (about one second)\n\n\n\n\n");
 
@@ -330,11 +297,7 @@ void *EmulateGraphics(void *params)
         }
         frameCounter = 0;
         pthread_mutex_unlock(&graphicsLock);
-
-        pthread_mutex_lock(&exitLock);
-        quit = requestExit;
-        pthread_mutex_unlock(&exitLock);
-    }
+    } while(!Quit());
     // while(!(*quit))
     //     frameStart = Timer(frameStart, SEC_PER_FRAME, drawGraphicsPtr, drawGraphicsArgs);
     return NULL;
@@ -374,6 +337,17 @@ void *IncrementCounters(void *params)
     timaCounter++;
 
     return NULL;
+}
+
+bool Quit()
+{
+    if(pthread_mutex_trylock(&exitLock) == 0)
+    {
+        pthread_mutex_unlock(&exitLock);
+        return true;
+    }
+    else
+        return false;
 }
 
 // // Execute a single cpu instruction and write out the number of cycles consumed
