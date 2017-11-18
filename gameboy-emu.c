@@ -18,18 +18,13 @@ void *DrawGraphics(void *params);
 
 bool Quit();
 
-volatile int frameCounter = 0;
-volatile short lineCounter = 0;
-volatile short cycleCounter = 0;
-volatile short divCounter = 0;
-volatile short timaCounter = 0;
-
 pthread_barrier_t barrier;
 pthread_attr_t attribute;
 pthread_mutex_t exitLock;
 
 pthread_cond_t CPUCond;
 pthread_mutex_t CPULock;
+pthread_mutex_t cyclesLock;
 volatile short cycles = 0;
 
 pthread_cond_t graphicsCond;
@@ -67,6 +62,7 @@ int main(int argc, char **argv)
     pthread_mutex_init(&exitLock, NULL);
     
     pthread_mutex_init(&CPULock, NULL);
+    pthread_mutex_init(&cyclesLock, NULL);
     pthread_cond_init(&CPUCond, NULL);
 
     pthread_mutex_init(&graphicsLock, NULL);
@@ -77,13 +73,11 @@ int main(int argc, char **argv)
     pthread_t clockThread;
     pthread_create(&clockThread, &attribute, EmulateClock, NULL);
 
-    pthread_t CPUThread;
-    void *emulateCPUArgs = (void *)output;
-    pthread_create(&CPUThread, &attribute, EmulateCPU, emulateCPUArgs);
+    //pthread_t CPUThread;
+    //pthread_create(&CPUThread, &attribute, EmulateCPU, (void *)output);
 
     pthread_t graphicsThread;
-    void *emulateGraphicsArgs = (void *)output;
-    pthread_create(&graphicsThread, &attribute, EmulateGraphics, emulateGraphicsArgs);
+    pthread_create(&graphicsThread, &attribute, EmulateGraphics, (void *)output);
 
     pthread_barrier_wait(&barrier);
     while(!quit)
@@ -102,6 +96,7 @@ int main(int argc, char **argv)
     pthread_mutex_destroy(&graphicsLock);
     pthread_cond_destroy(&CPUCond);
     pthread_mutex_destroy(&CPULock);
+    pthread_mutex_destroy(&cyclesLock);
     pthread_mutex_destroy(&exitLock);
     pthread_barrier_destroy(&barrier);
 
@@ -207,15 +202,23 @@ bool InitializeSDL(SDL_Window **window, SDL_Renderer **renderer, const unsigned 
 
 void *EmulateClock(void *params)
 {
+    pthread_mutex_lock(&CPULock);
+    pthread_mutex_lock(&graphicsLock);
+
     Uint64 clockStart = 0;
 
-    // Point function pointer to DrawGraphics() and set parameters to pass
-    void *(*incrementCountersPtr)(void *params) = IncrementCounters;
+    short cycleCounter = 0;
+    short divCounter = 0;
+    short timaCounter = 0;
+    short lineCounter = 0;
+    int frameCounter = 0;
+
+    void *args[] = { &cycleCounter, &divCounter, &timaCounter, &lineCounter, &frameCounter };
 
     pthread_barrier_wait(&barrier);
     do
     {
-        clockStart = Timer(clockStart, SEC_PER_CYCLE, incrementCountersPtr, NULL);
+        clockStart = Timer(clockStart, SEC_PER_CYCLE, IncrementCounters, args);
     } while(!Quit());
 
     return NULL;
@@ -236,27 +239,18 @@ void *EmulateCPU(void *params)
     do
     {
         opcode = FetchByte(output);
-
-        pthread_mutex_lock(&CPULock);
+     
+        pthread_mutex_lock(&cyclesLock);
         cycles = DecodeExecute(opcode, output);
         fprintf(output, " (%d cycles)\n", cycles);
-        pthread_mutex_unlock(&CPULock);
+        pthread_mutex_unlock(&cyclesLock);
 
-        // do
-        // {
-        //     pthread_mutex_lock(&CPULock);
-        //     count = cycleCounter;
-        //     pthread_mutex_unlock(&CPULock);
-        // } while(count < cycles);
-        // cycleCounter = 0;
-
-        pthread_mutex_lock(&CPULock);
-        while(cycleCounter < cycles)
+        while(pthread_mutex_trylock(&CPULock) != 0)
         {
             pthread_cond_wait(&CPUCond, &CPULock);
         }
-        cycleCounter = 0;
         pthread_mutex_unlock(&CPULock);
+
     } while(!Quit());
 
     // // Point function pointer to ExecuteInst() and set parameters to pass
@@ -288,15 +282,14 @@ void *EmulateGraphics(void *params)
     pthread_barrier_wait(&barrier);
     do
     {
-        fprintf(output, "\n\n\n\n\n60th frame (about one second)\n\n\n\n\n");
+        fprintf(output, "\n\n\n\n\nFRAME!\n\n\n\n\n");
 
-        pthread_mutex_lock(&graphicsLock);
-        while(frameCounter < CYCLES_PER_FRAME)
+        while(pthread_mutex_trylock(&graphicsLock) != 0)
         {
             pthread_cond_wait(&graphicsCond, &graphicsLock);
         }
-        frameCounter = 0;
         pthread_mutex_unlock(&graphicsLock);
+
     } while(!Quit());
     // while(!(*quit))
     //     frameStart = Timer(frameStart, SEC_PER_FRAME, drawGraphicsPtr, drawGraphicsArgs);
@@ -322,19 +315,41 @@ Uint64 Timer(Uint64 begin, long double threshold, void *(*callMe)(void *), void 
 
 void *IncrementCounters(void *params)
 {
-    pthread_mutex_lock(&CPULock);
-    cycleCounter++;
-    if (cycleCounter >= cycles) pthread_cond_broadcast(&CPUCond);
-    pthread_mutex_unlock(&CPULock);
+    void **paramList = (void **)params;
 
-    pthread_mutex_lock(&graphicsLock);
-    frameCounter++;
-    if (frameCounter >= CYCLES_PER_FRAME) pthread_cond_broadcast(&graphicsCond);
-    pthread_mutex_unlock(&graphicsLock);
+    short *cycleCounter = (short *)paramList[0];
+    short *divCounter = (short *)paramList[1];
+    short *timaCounter = (short *)paramList[2];
+    short *lineCounter = (short *)paramList[3];
+    int *frameCounter = (int *)paramList[4];
+    
+    short thing = 0;
 
-    lineCounter++;
-    divCounter++;
-    timaCounter++;
+    (*cycleCounter)++;
+    (*divCounter)++;
+    (*timaCounter)++;
+    (*lineCounter)++;
+    (*frameCounter)++;
+
+    //pthread_mutex_lock(&cyclesLock);
+    //thing = cycles;
+    //pthread_mutex_unlock(&cyclesLock);
+
+    // if(*cycleCounter == thing)
+    // {
+    //     pthread_mutex_unlock(&CPULock);
+    //     pthread_cond_signal(&CPUCond);
+    //     pthread_mutex_lock(&CPULock);
+    //     *cycleCounter = 0;
+    // }
+
+    if(*frameCounter == CYCLES_PER_FRAME)
+    {
+        pthread_mutex_unlock(&graphicsLock);
+        pthread_cond_signal(&graphicsCond);
+        pthread_mutex_lock(&graphicsLock);
+        *frameCounter = 0;
+    }
 
     return NULL;
 }
