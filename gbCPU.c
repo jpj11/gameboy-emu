@@ -2,7 +2,6 @@
 #include <string.h>
 #include "gbCPU.h"
 
-const long double SEC_PER_FRAME = 1.0 / VERTICAL_SYNC;
 const long double SEC_PER_CYCLE = 1.0 / CLOCK_SPEED;
 const short TIMA_SPEED[] = { TAC_ZERO, TAC_ONE, TAC_TWO, TAC_THREE };
 bool IME = true;

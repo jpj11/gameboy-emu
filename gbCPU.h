@@ -17,8 +17,7 @@ typedef enum
 #define SCREEN_HEIGHT 144
 #define CHANNELS 3
 
-#define VERTICAL_SYNC 59.73
-extern const long double SEC_PER_FRAME;
+#define CYCLES_PER_FRAME 70224 
 
 // CPU Constants
 #define CLOCK_SPEED 4194304
