@@ -11,7 +11,7 @@ void *EmulateFrame(void *params);
 void *EmulateLine(void *params);
 
 void ExecuteInst(short *cycles, FILE *output);
-void DrawGraphics(FILE *output);
+void DrawScanLine(FILE *output);
 
 int main(int argc, char **argv)
 {
@@ -177,6 +177,34 @@ void *EmulateFrame(void *params)
     Uint64 lineStart = 0;
     short cycles = 0, i, j;
 
+    // If the display is disabled, calculate cycles and return
+    if((mainMemory[REG_LCDC] & 0x80) == 0)
+    {
+        for(i = 0; i < SCREEN_HEIGHT; i++)
+        {
+            for(j = 0; j < CYCLES_PER_LINE; j += cycles)
+                ExecuteInst(&cycles, (FILE *)params);
+
+            DrawScanLine((FILE *)params);
+            mainMemory[REG_LY] += 1;
+        }
+
+        // Mode 1 - Vertical Blank
+        SetLCDMode(vblank);
+        if(mainMemory[REG_STAT] & 0x10)
+            RequestInterrupt(vrefresh);
+
+        for(i = 0; i < SCAN_LINES - SCREEN_HEIGHT; i++)
+        {
+            for(j = 0; j < CYCLES_PER_LINE; j += cycles)
+                ExecuteInst(&cycles, (FILE *)params);
+            mainMemory[REG_LY] += 1;
+        }
+
+        return NULL;
+    }
+
+    // Draw visible scanlines
     while(mainMemory[REG_LY] < SCREEN_HEIGHT)
         lineStart = Timer(lineStart, SEC_PER_LINE, EmulateLine, params);
     
@@ -185,13 +213,12 @@ void *EmulateFrame(void *params)
     if(mainMemory[REG_STAT] & 0x10)
         RequestInterrupt(vrefresh);
 
-    for(i = 0; i < 9; i++)
+    // Execute instructions during vblank
+    for(i = 0; i < SCAN_LINES - SCREEN_HEIGHT; i++)
     {
-        for(j = 0; i < CYCLES_PER_LINE; i += cycles)
-        {
+        for(j = 0; j < CYCLES_PER_LINE; j += cycles)
             ExecuteInst(&cycles, (FILE *)params);
-            mainMemory[REG_LY] += 1;
-        }
+        mainMemory[REG_LY] += 1;
     }
 
     return NULL;
@@ -203,10 +230,12 @@ void *EmulateLine(void *params)
     short cyclesThisLine = 0;
     short cycles = 0, i;
 
+    // If REG_LY == REG_LYC, set coincidence bit otherwise unset
     if(mainMemory[REG_LY] == mainMemory[REG_LYC])
         mainMemory[REG_STAT] |= 0x04;
     else
-        mainMemory[REG_STAT] &= 0x03;
+        mainMemory[REG_STAT] &= 0xfb;
+
 
     // Mode 2 - OAM Search
     SetLCDMode(oam);
@@ -217,12 +246,16 @@ void *EmulateLine(void *params)
         ExecuteInst(&cycles, output);
     cyclesThisLine += i;
 
+
     // Mode 3 - Transfer
     SetLCDMode(transfer);
+    if((mainMemory[REG_STAT] & 0x40) && (mainMemory[REG_STAT] & 0x04))
+        RequestInterrupt(lcd_stat);
 
     for(i = 0; i < CYCLES_PER_TRANSFER; i += cycles)
         ExecuteInst(&cycles, output);
     cyclesThisLine += i;
+
 
     // Mode 0 - Horizontal Blank
     SetLCDMode(hblank);
@@ -232,7 +265,7 @@ void *EmulateLine(void *params)
     for(i = 0; i < CYCLES_PER_LINE - cyclesThisLine; i += cycles)
         ExecuteInst(&cycles, output);
 
-    fprintf(output, "LINE %d!\n", mainMemory[REG_LY]);
+    DrawScanLine(output);
 
     mainMemory[REG_LY] += 0x01;
 
@@ -305,9 +338,9 @@ void ExecuteInst(short *cycles, FILE *output)
 }
 
 // Draw a single frame of graphics to the window
-void DrawGraphics(FILE *output)
+void DrawScanLine(FILE *output)
 {
-    fprintf(output, "\n\nFRAME!\n\n\n");
+    fprintf(output, "\n\nLINE!\n\n\n");
 
     // Do graphics here
 }

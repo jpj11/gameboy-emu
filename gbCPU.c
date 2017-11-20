@@ -44,6 +44,9 @@ void InitSystem()
     
     mainMemory[REG_IE] = 0x00;
     mainMemory[REG_IF] = 0x00;
+
+    mainMemory[REG_LCDC] = 0x91;
+    mainMemory[REG_LYC] = 0x00;
 }
 
 // Fetch the next BYTE from memory at PC
@@ -86,6 +89,8 @@ void Write(BYTE *dest, BYTE src)
     {
         if(dest == &mainMemory[REG_DIV] || dest == &mainMemory[REG_LY])
             *dest = 0x00;
+        else if(dest == &mainMemory[REG_DMA])
+            DMATransfer(src);
         else
             *dest = src;
     }
@@ -112,6 +117,13 @@ void SetLCDMode(enum LCDMode mode)
     mainMemory[REG_STAT] |= mode;
 }
 
+void DMATransfer(BYTE source)
+{
+    WORD address = source << 8;
+
+    for(int i = 0; i < 0xA0; i++)
+        Write(&mainMemory[OAM_TABLE + i], mainMemory[address + i]);
+}
 
 // ========================== Load Instructions =========================== //
 

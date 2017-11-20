@@ -15,6 +15,7 @@ typedef enum
 // Graphics constants
 #define SCREEN_WIDTH 160
 #define SCREEN_HEIGHT 144
+#define SCAN_LINES 154
 #define CHANNELS 3
 
 #define CYCLES_PER_HBLANK 201
@@ -42,6 +43,8 @@ extern const WORD INTERRUPT_VECTORS[];
 
 #define REG_P1   0xff00
 
+#define OAM_TABLE 0xfe00
+
 // Timing registers
 #define REG_DIV  0xff04
 #define REG_TIMA 0xff05
@@ -53,6 +56,8 @@ extern const WORD INTERRUPT_VECTORS[];
 #define REG_STAT 0xff41
 #define REG_LY   0xff44
 #define REG_LYC  0xff45
+
+#define REG_DMA  0xff46
 
 // Interrupt enable and flag
 #define REG_IE   0xffff
@@ -148,6 +153,8 @@ bool IsRequested(enum interrupt toCheck);
 bool IsEnabled(enum interrupt toCheck);
 
 void SetLCDMode(enum LCDMode);
+
+void DMATransfer(BYTE source);
 
 // Load instructions
 short LoadByte(BYTE *dest, enum operandType destType, BYTE src, enum operandType srcType);
