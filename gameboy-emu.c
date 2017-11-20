@@ -11,7 +11,9 @@ void *EmulateFrame(void *params);
 void *EmulateLine(void *params);
 
 void ExecuteInst(short *cycles, FILE *output);
-void DrawScanLine(FILE *output);
+void DrawScanLine(SDL_Window **window, SDL_Renderer **renderer, FILE *output);
+
+bool evenFrame = false;
 
 int main(int argc, char **argv)
 {
@@ -37,6 +39,7 @@ int main(int argc, char **argv)
 
     bool quit = false;      // Controls main emulation loop
     SDL_Event event;        // Captures user input
+    void *emulateFrameArgs[] = { &window, &renderer, output };
     
     Uint64 frameStart = 0;
     while(!quit)
@@ -49,7 +52,7 @@ int main(int argc, char **argv)
                 quit = true;
         }
         
-        frameStart = Timer(frameStart, SEC_PER_FRAME, EmulateFrame, output);
+        frameStart = Timer(frameStart, SEC_PER_FRAME, EmulateFrame, emulateFrameArgs);
     }
 
     // Close the output file if one was specified
@@ -171,11 +174,16 @@ Uint64 Timer(Uint64 begin, long double threshold, void *(*callMe)(void *), void 
 
 void *EmulateFrame(void *params)
 {
-    fprintf((FILE *)params, "\n\nFRAME!\n\n\n");
+    void **paramList = (void **)params;
+    SDL_Window **window = (SDL_Window **)paramList[0];
+    SDL_Renderer **renderer = (SDL_Renderer **)paramList[1];
+    FILE *output = (FILE *)paramList[2];
 
     mainMemory[REG_LY] = 0x00;
     Uint64 lineStart = 0;
     short cycles = 0, i, j;
+
+    evenFrame = !evenFrame;
 
     // If the display is disabled, calculate cycles and return
     if((mainMemory[REG_LCDC] & 0x80) == 0)
@@ -183,9 +191,9 @@ void *EmulateFrame(void *params)
         for(i = 0; i < SCREEN_HEIGHT; i++)
         {
             for(j = 0; j < CYCLES_PER_LINE; j += cycles)
-                ExecuteInst(&cycles, (FILE *)params);
+                ExecuteInst(&cycles, output);
 
-            DrawScanLine((FILE *)params);
+            DrawScanLine(window, renderer, output);
             mainMemory[REG_LY] += 1;
         }
 
@@ -197,7 +205,7 @@ void *EmulateFrame(void *params)
         for(i = 0; i < SCAN_LINES - SCREEN_HEIGHT; i++)
         {
             for(j = 0; j < CYCLES_PER_LINE; j += cycles)
-                ExecuteInst(&cycles, (FILE *)params);
+                ExecuteInst(&cycles, output);
             mainMemory[REG_LY] += 1;
         }
 
@@ -217,7 +225,7 @@ void *EmulateFrame(void *params)
     for(i = 0; i < SCAN_LINES - SCREEN_HEIGHT; i++)
     {
         for(j = 0; j < CYCLES_PER_LINE; j += cycles)
-            ExecuteInst(&cycles, (FILE *)params);
+            ExecuteInst(&cycles, output);
         mainMemory[REG_LY] += 1;
     }
 
@@ -226,7 +234,11 @@ void *EmulateFrame(void *params)
 
 void *EmulateLine(void *params)
 {   
-    FILE *output = (FILE *)params;
+    void **paramList = (void **)params;
+    SDL_Window **window = (SDL_Window **)paramList[0];
+    SDL_Renderer **renderer = (SDL_Renderer **)paramList[1];
+    FILE *output = (FILE *)paramList[2];
+
     short cyclesThisLine = 0;
     short cycles = 0, i;
 
@@ -265,7 +277,7 @@ void *EmulateLine(void *params)
     for(i = 0; i < CYCLES_PER_LINE - cyclesThisLine; i += cycles)
         ExecuteInst(&cycles, output);
 
-    DrawScanLine(output);
+    DrawScanLine(window, renderer, output);
 
     mainMemory[REG_LY] += 0x01;
 
@@ -338,9 +350,56 @@ void ExecuteInst(short *cycles, FILE *output)
 }
 
 // Draw a single frame of graphics to the window
-void DrawScanLine(FILE *output)
+void DrawScanLine(SDL_Window **window, SDL_Renderer **renderer, FILE *output)
 {
-    fprintf(output, "\n\nLINE!\n\n\n");
+    if((mainMemory[REG_LY] % 2 == 0 && evenFrame) || (mainMemory[REG_LY] % 2 != 0 && !evenFrame))
+    {
+        for(int i = 0; i < SCREEN_WIDTH; i++)
+        {
+            screenData[mainMemory[REG_LY]][i][0] = 0x00;   
+            screenData[mainMemory[REG_LY]][i][1] = 0x00;
+            screenData[mainMemory[REG_LY]][i][2] = 0x00;
+        }
+    }
+    else
+    {
+        for(int i = 0; i < SCREEN_WIDTH; i++)
+        {
+            screenData[mainMemory[REG_LY]][i][0] = 0xff;   
+            screenData[mainMemory[REG_LY]][i][1] = 0xff;
+            screenData[mainMemory[REG_LY]][i][2] = 0xff;
+        }
+    }
 
-    // Do graphics here
+    // New surface created from data in screenData
+    SDL_Surface *graphics = SDL_CreateRGBSurfaceFrom(
+        (void *)screenData,
+        SCREEN_WIDTH,
+        SCREEN_HEIGHT,
+        CHANNELS * 8,
+        SCREEN_WIDTH * CHANNELS,
+        0x0000FF,
+        0x00FF00,
+        0xFF0000,
+        0x000000
+    );
+
+    // Create texture from graphics
+    SDL_Texture *texture = SDL_CreateTextureFromSurface(*renderer, graphics);
+    if(texture == NULL)
+    {
+        fprintf(stderr, "SDL ERROR!\nTexture could not be created: %s", SDL_GetError());
+        return;
+    }
+
+    // Render texture
+    SDL_RenderClear(*renderer);
+    SDL_RenderCopy(*renderer, texture, NULL, NULL);
+    SDL_RenderPresent(*renderer);
+
+    // Free SDL resources
+    SDL_FreeSurface(graphics);
+    SDL_DestroyTexture(texture);
+
+    return;
 }

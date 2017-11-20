@@ -45,7 +45,7 @@ void InitSystem()
     mainMemory[REG_IE] = 0x00;
     mainMemory[REG_IF] = 0x00;
 
-    mainMemory[REG_LCDC] = 0x91;
+    //mainMemory[REG_LCDC] = 0x91;
     mainMemory[REG_LYC] = 0x00;
 }
 
