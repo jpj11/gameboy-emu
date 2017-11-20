@@ -3,21 +3,15 @@
 #include <SDL2/SDL.h>
 #include "gbCPU.h"
 
-#define NUM_BARRIER_THREADS 3
-
 bool InputIsValid(int argc, char **argv, FILE **output);
 bool InitializeSDL(SDL_Window **window, SDL_Renderer **renderer, const unsigned short MULTIPLIER);
 
 Uint64 Timer(Uint64 begin, long double threshold, void *(*callMe)(void *), void *params);
-void *IncrementCounters(void *params);
+void *EmulateFrame(void *params);
+void *EmulateLine(void *params);
+
 void ExecuteInst(short *cycles, FILE *output);
 void DrawGraphics(FILE *output);
-
-int frameCounter = 0;
-short lineCounter = 0;
-short cycleCounter = 0;
-short divCounter = 0;
-short timaCounter = 0;
 
 int main(int argc, char **argv)
 {
@@ -41,29 +35,12 @@ int main(int argc, char **argv)
     // Initialize Gameboy cpu and memory
     InitSystem();
 
-    Uint64 clockStart = 0;
-
     bool quit = false;      // Controls main emulation loop
     SDL_Event event;        // Captures user input
-    short cycles = 0;
     
-    ExecuteInst(&cycles, output);
+    Uint64 frameStart = 0;
     while(!quit)
     {
-        clockStart = Timer(clockStart, SEC_PER_CYCLE, IncrementCounters, NULL);
-
-        if(cycleCounter >= cycles)
-        {
-            cycleCounter = 0;
-            ExecuteInst(&cycles, output);
-        }
-
-        if(frameCounter >= CYCLES_PER_FRAME)
-        {
-            frameCounter = 0;
-            DrawGraphics(output);
-        }
-
         while(SDL_PollEvent(&event) != 0)
         {
             // Do input here
@@ -71,6 +48,8 @@ int main(int argc, char **argv)
             if(event.type == SDL_QUIT)
                 quit = true;
         }
+        
+        frameStart = Timer(frameStart, SEC_PER_FRAME, EmulateFrame, output);
     }
 
     // Close the output file if one was specified
@@ -190,13 +169,72 @@ Uint64 Timer(Uint64 begin, long double threshold, void *(*callMe)(void *), void 
     return begin;
 }
 
-void *IncrementCounters(void *params)
+void *EmulateFrame(void *params)
 {
-    cycleCounter++;
-    frameCounter++;
-    lineCounter++;
-    divCounter++;
-    timaCounter++;
+    fprintf((FILE *)params, "\n\nFRAME!\n\n\n");
+
+    mainMemory[REG_LY] = 0x00;
+    Uint64 lineStart = 0;
+    short cycles = 0, i, j;
+
+    while(mainMemory[REG_LY] < SCREEN_HEIGHT)
+        lineStart = Timer(lineStart, SEC_PER_LINE, EmulateLine, params);
+    
+    // Mode 1 - Vertical Blank
+    SetLCDMode(vblank);
+    if(mainMemory[REG_STAT] & 0x10)
+        RequestInterrupt(vrefresh);
+
+    for(i = 0; i < 9; i++)
+    {
+        for(j = 0; i < CYCLES_PER_LINE; i += cycles)
+        {
+            ExecuteInst(&cycles, (FILE *)params);
+            mainMemory[REG_LY] += 1;
+        }
+    }
+
+    return NULL;
+}
+
+void *EmulateLine(void *params)
+{   
+    FILE *output = (FILE *)params;
+    short cyclesThisLine = 0;
+    short cycles = 0, i;
+
+    if(mainMemory[REG_LY] == mainMemory[REG_LYC])
+        mainMemory[REG_STAT] |= 0x04;
+    else
+        mainMemory[REG_STAT] &= 0x03;
+
+    // Mode 2 - OAM Search
+    SetLCDMode(oam);
+    if(mainMemory[REG_STAT] & 0x20)
+        RequestInterrupt(lcd_stat);
+
+    for(i = 0; i < CYCLES_PER_OAM; i += cycles)
+        ExecuteInst(&cycles, output);
+    cyclesThisLine += i;
+
+    // Mode 3 - Transfer
+    SetLCDMode(transfer);
+
+    for(i = 0; i < CYCLES_PER_TRANSFER; i += cycles)
+        ExecuteInst(&cycles, output);
+    cyclesThisLine += i;
+
+    // Mode 0 - Horizontal Blank
+    SetLCDMode(hblank);
+    if(mainMemory[REG_STAT] & 0x08)
+        RequestInterrupt(lcd_stat);
+
+    for(i = 0; i < CYCLES_PER_LINE - cyclesThisLine; i += cycles)
+        ExecuteInst(&cycles, output);
+
+    fprintf(output, "LINE %d!\n", mainMemory[REG_LY]);
+
+    mainMemory[REG_LY] += 0x01;
 
     return NULL;
 }
@@ -205,56 +243,65 @@ void *IncrementCounters(void *params)
 void ExecuteInst(short *cycles, FILE *output)
 {   
     BYTE opcode = 0x00;             // Opcode representing the instruction to be executed
-    // static short divCounter = 0;    // Counts the cycles between div register increments
-    // static short timaCounter = 0;   // Counts the cycles between tima register increments
+    static short divCounter = 0;    // Counts the cycles between div register increments
+    static short timaCounter = 0;   // Counts the cycles between tima register increments
 
     // Fetch, decode and execute instruction
     opcode = FetchByte(output);
     *cycles = DecodeExecute(opcode, output);
     fprintf(output, " (%d cycles)\n", *cycles);
 
-    // // After DIV_SPEED cycles increment the div register
-    // divCounter += *cycles;
-    // if(divCounter >= DIV_SPEED)
-    // {
-    //     mainMemory[REG_DIV] += 1;
-    //     fprintf(output, "REG_DIV++\n");
-    //     divCounter = 0;
-    // }
+    // After DIV_SPEED cycles increment the div register
+    divCounter += *cycles;
+    if(divCounter >= DIV_SPEED)
+    {
+        mainMemory[REG_DIV] += 1;
+        fprintf(output, "REG_DIV++\n");
+        divCounter = 0;
+    }
 
-    // if(mainMemory[REG_TAC] & 0x04)
-    // {
-    //     timaCounter += *cycles;
-    //     if(timaCounter >= TIMA_SPEED[mainMemory[REG_TAC] & 0x03])
-    //     {
-    //         if(mainMemory[REG_TIMA] == 0xff)
-    //         {
-    //             mainMemory[REG_TIMA] = mainMemory[REG_TMA];
-    //             RequestInterrupt(timer);
-    //         }
-    //         else
-    //             mainMemory[REG_TIMA] += 1;
+    // If TIMA counter is enabled, count cycles for TIMA
+    if(mainMemory[REG_TAC] & 0x04)
+    {
+        timaCounter += *cycles;
 
-    //         fprintf(output, "REG_TIMA++\n");
-    //         timaCounter = 0;
-    //     }
-    // }
+        // If counter surpasses the number of cycles specified by REG_TAC, increment
+        if(timaCounter >= TIMA_SPEED[mainMemory[REG_TAC] & 0x03])
+        {
+            // If REG_TIMA will overflow this increment, request interrupt
+            if(mainMemory[REG_TIMA] == 0xff)
+            {
+                // Reset REG_TIMA to value specified by REG_TMA
+                mainMemory[REG_TIMA] = mainMemory[REG_TMA];
+                RequestInterrupt(timer);
+            }
+            // Otherwise just increment REG_TIMA
+            else
+                mainMemory[REG_TIMA] += 1;
 
-    // // If master interrupt enable flag is true and interrupts are requested
-    // if(IME && mainMemory[REG_IF])
-    // {
-    //     enum interrupt toCheck;
-    //     for(toCheck = vblank; toCheck <= joypad; toCheck++)
-    //     {
-    //         if(IsRequested(toCheck) && IsEnabled(toCheck))
-    //         {
-    //             mainMemory[REG_IF] &= ~(1 << toCheck);
-    //             IME = false;
+            fprintf(output, "REG_TIMA++\n");
+            timaCounter = 0;
+        }
+    }
 
-    //             Call(INTERRUPT_VECTORS[toCheck]);
-    //         }
-    //     }
-    // }
+    // If master interrupt enable flag is true and interrupts are requested
+    if(IME && mainMemory[REG_IF])
+    {
+        // Check all possible interrupts
+        enum interrupt toCheck;
+        for(toCheck = vrefresh; toCheck <= joypad; toCheck++)
+        {
+            // If an interrupt is requested and enabled, call interrupt
+            // Note that interrupts are checked in priority order
+            if(IsRequested(toCheck) && IsEnabled(toCheck))
+            {
+                mainMemory[REG_IF] &= ~(1 << toCheck);
+                IME = false;
+
+                Call(INTERRUPT_VECTORS[toCheck]);
+            }
+        }
+    }
 }
 
 // Draw a single frame of graphics to the window

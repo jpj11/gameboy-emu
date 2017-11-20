@@ -2,7 +2,8 @@
 #include <string.h>
 #include "gbCPU.h"
 
-const long double SEC_PER_CYCLE = 1.0 / CLOCK_SPEED;
+const long double SEC_PER_FRAME = CYCLES_PER_FRAME / (long double)CLOCK_SPEED;
+const long double SEC_PER_LINE = CYCLES_PER_LINE / (long double)CLOCK_SPEED;
 const short TIMA_SPEED[] = { TAC_ZERO, TAC_ONE, TAC_TWO, TAC_THREE };
 bool IME = true;
 const WORD INTERRUPT_VECTORS[] = { VBLANK_VECT, LCD_STAT_VECT, TIMER_VECT, SERIAL_VECT, JOYPAD_VECT };
@@ -83,7 +84,7 @@ void Write(BYTE *dest, BYTE src)
         return;
     else
     {
-        if(dest == &mainMemory[REG_DIV])
+        if(dest == &mainMemory[REG_DIV] || dest == &mainMemory[REG_LY])
             *dest = 0x00;
         else
             *dest = src;
@@ -103,6 +104,12 @@ bool IsRequested(enum interrupt toCheck)
 bool IsEnabled(enum interrupt toCheck)
 {
     return (mainMemory[REG_IE] >> toCheck) & 1;
+}
+
+void SetLCDMode(enum LCDMode mode)
+{
+    mainMemory[REG_STAT] &= 0xfc;
+    mainMemory[REG_STAT] |= mode;
 }
 
 
@@ -268,8 +275,12 @@ short IncrementByte(BYTE *value, enum operandType valueType)
     (*value & 0x0f) > 0x0e ? SetFlag(halfCarry) : UnsetFlag(halfCarry);
 
     // Increment byte
-    *value = *value + 1;
-
+    BYTE result = *value + 1;
+    if(valueType != reg || valueType != immediate)
+        Write(value, result);
+    else
+        *value = result;
+        
     // Set flags based on result
     *value == 0x00 ? SetFlag(zero) : UnsetFlag(zero);
 
@@ -288,7 +299,11 @@ short DecrementByte(BYTE *value, enum operandType valueType)
     (*value & 0x0f) < 0x01 ? SetFlag(halfCarry) : UnsetFlag(halfCarry);
 
     // Decrement byte
-    *value = *value - 1;
+    BYTE result = *value - 1;
+    if(valueType != reg || valueType != immediate)
+        Write(value, result);
+    else
+        *value = result;
 
     // Set flags based on result
     *value == 0x00 ? SetFlag(zero) : UnsetFlag(zero);
@@ -430,8 +445,8 @@ short JumpRelativeCond(enum cpuFlag flag, bool condition, S_BYTE offset)
     bool flagIsSet = GetFlag(flag);
 
     // If the flag state matches condition, jump
-    if( (flagIsSet == true  && condition == true) ||
-        (flagIsSet == false && condition == false) )
+    if( (flagIsSet && condition == true) ||
+        (!flagIsSet && condition == false) )
     {
         PC.word += offset;
         return 12;

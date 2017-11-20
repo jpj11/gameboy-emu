@@ -17,15 +17,23 @@ typedef enum
 #define SCREEN_HEIGHT 144
 #define CHANNELS 3
 
-#define CYCLES_PER_FRAME 70224 
+#define CYCLES_PER_HBLANK 201
+#define CYCLES_PER_VBLANK 4560
+#define CYCLES_PER_OAM 77
+#define CYCLES_PER_TRANSFER 169
 
-// CPU Constants
+#define CYCLES_PER_LINE 456
+#define CYCLES_PER_FRAME 70224
+extern const long double SEC_PER_LINE;
+extern const long double SEC_PER_FRAME;
+
+// --> CPU Constants <-- //
 #define CLOCK_SPEED 4194304
-extern const long double SEC_PER_CYCLE;
 extern const short TIMA_SPEED[];
 extern bool IME;
 extern const WORD INTERRUPT_VECTORS[];
 
+// Cycle counts for timer registers
 #define DIV_SPEED 256
 #define TAC_ZERO  1024
 #define TAC_ONE   16
@@ -34,14 +42,23 @@ extern const WORD INTERRUPT_VECTORS[];
 
 #define REG_P1   0xff00
 
+// Timing registers
 #define REG_DIV  0xff04
 #define REG_TIMA 0xff05
 #define REG_TMA  0xff06
 #define REG_TAC  0xff07
 
+// LCD driver registers
+#define REG_LCDC 0xff40
+#define REG_STAT 0xff41
+#define REG_LY   0xff44
+#define REG_LYC  0xff45
+
+// Interrupt enable and flag
 #define REG_IE   0xffff
 #define REG_IF   0xff0f
 
+// Locations of interrupt routines
 #define VBLANK_VECT   0x0040
 #define LCD_STAT_VECT 0x0048
 #define TIMER_VECT    0x0050
@@ -103,11 +120,19 @@ enum cpuFlag
 // Possible interrupts that can be raised
 enum interrupt
 {
-    vblank,
+    vrefresh,
     lcd_stat,
     timer,
     serial,
     joypad
+};
+
+enum LCDMode
+{
+    hblank,
+    vblank,
+    oam,
+    transfer
 };
 
 // Primary execution functions
@@ -117,9 +142,12 @@ WORD FetchWord(FILE *output);
 short DecodeExecute(BYTE opcode, FILE *output);
 
 void Write(BYTE *dest, BYTE src);
+
 void RequestInterrupt(enum interrupt requested);
 bool IsRequested(enum interrupt toCheck);
 bool IsEnabled(enum interrupt toCheck);
+
+void SetLCDMode(enum LCDMode);
 
 // Load instructions
 short LoadByte(BYTE *dest, enum operandType destType, BYTE src, enum operandType srcType);
