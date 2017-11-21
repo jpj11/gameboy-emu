@@ -41,9 +41,9 @@ extern const WORD INTERRUPT_VECTORS[];
 #define TAC_TWO   64
 #define TAC_THREE 256
 
-#define REG_P1   0xff00
-
 #define OAM_TABLE 0xfe00
+
+#define REG_P1   0xff00
 
 // Timing registers
 #define REG_DIV  0xff04
@@ -54,14 +54,23 @@ extern const WORD INTERRUPT_VECTORS[];
 // LCD driver registers
 #define REG_LCDC 0xff40
 #define REG_STAT 0xff41
+#define REG_SCY  0xff42
+#define REG_SCX  0xff43
 #define REG_LY   0xff44
 #define REG_LYC  0xff45
+
+#define REG_BGP  0xff47
+#define REG_OBP0 0xff48
+#define REG_OBP1 0xff49
+
+#define REG_WY   0xff4a
+#define REG_WX   0xff4b
 
 #define REG_DMA  0xff46
 
 // Interrupt enable and flag
-#define REG_IE   0xffff
 #define REG_IF   0xff0f
+#define REG_IE   0xffff
 
 // Locations of interrupt routines
 #define VBLANK_VECT   0x0040

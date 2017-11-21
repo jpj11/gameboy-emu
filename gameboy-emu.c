@@ -352,16 +352,26 @@ void ExecuteInst(short *cycles, FILE *output)
 // Draw a single frame of graphics to the window
 void DrawScanLine(SDL_Window **window, SDL_Renderer **renderer, FILE *output)
 {
-    if((mainMemory[REG_LY] % 2 == 0 && evenFrame) || (mainMemory[REG_LY] % 2 != 0 && !evenFrame))
-    {
-        for(int i = 0; i < SCREEN_WIDTH; i++)
-        {
-            screenData[mainMemory[REG_LY]][i][0] = 0x00;   
-            screenData[mainMemory[REG_LY]][i][1] = 0x00;
-            screenData[mainMemory[REG_LY]][i][2] = 0x00;
-        }
-    }
-    else
+    // if((mainMemory[REG_LY] % 2 == 0 && evenFrame) || (mainMemory[REG_LY] % 2 != 0 && !evenFrame))
+    // {
+    //     for(int i = 0; i < SCREEN_WIDTH; i++)
+    //     {
+    //         screenData[mainMemory[REG_LY]][i][0] = 0x00;   
+    //         screenData[mainMemory[REG_LY]][i][1] = 0x00;
+    //         screenData[mainMemory[REG_LY]][i][2] = 0x00;
+    //     }
+    // }
+    // else
+    // {
+    //     for(int i = 0; i < SCREEN_WIDTH; i++)
+    //     {
+    //         screenData[mainMemory[REG_LY]][i][0] = 0xff;   
+    //         screenData[mainMemory[REG_LY]][i][1] = 0xff;
+    //         screenData[mainMemory[REG_LY]][i][2] = 0xff;
+    //     }
+    // }
+
+    if((mainMemory[REG_LCDC] & 0x80) == 0)
     {
         for(int i = 0; i < SCREEN_WIDTH; i++)
         {
@@ -369,6 +379,10 @@ void DrawScanLine(SDL_Window **window, SDL_Renderer **renderer, FILE *output)
             screenData[mainMemory[REG_LY]][i][1] = 0xff;
             screenData[mainMemory[REG_LY]][i][2] = 0xff;
         }
+    }
+    else
+    {
+
     }
 
     // New surface created from data in screenData
