@@ -2,7 +2,7 @@
 OBJS = gameboy-emu.c gbCPU.c gbCPU.decode.c
 
 #CC specifies which compiler we're using
-CC = x86_64-w64-mingw32-gcc-7.1.0.exe
+CC = x86_64-w64-mingw32-gcc.exe
 
 #INCLUDE_PATHS specifies the additional include paths we'll need
 INCLUDE_PATHS = -IC:/x86_64-w64-mingw32/include
@@ -16,7 +16,7 @@ LIBRARY_PATHS = -LC:/x86_64-w64-mingw32/lib
 COMPILER_FLAGS = -g -Wall -Wpedantic#-w -Wl,-subsystem,windows
 
 #LINKER_FLAGS specifies the libraries we're linking against
-LINKER_FLAGS = -lmingw32 -lSDL2main -lSDL2 -lpthread#-lSDL2_mixer
+LINKER_FLAGS = -lmingw32 -lSDL2main -lSDL2 #-lSDL2_mixer
 
 #OBJ_NAME specifies the name of our exectuable
 OBJ_NAME = gameboy-emu
