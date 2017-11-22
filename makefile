@@ -2,7 +2,7 @@
 OBJS = gameboy-emu.c gbCPU.c gbCPU.decode.c
 
 #CC specifies which compiler we're using
-CC = x86_64-w64-mingw32-gcc-7.1.0.exe
+CC = x86_64-w64-mingw32-gcc.exe
 
 #INCLUDE_PATHS specifies the additional include paths we'll need
 INCLUDE_PATHS = -IC:/x86_64-w64-mingw32/include
