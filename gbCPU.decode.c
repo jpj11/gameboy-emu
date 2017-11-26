@@ -52,16 +52,16 @@ short DecodeExecute(BYTE opcode, FILE *output)
         case 0x32: cycles = LoadByte(&mainMemory[regHL.word--], memory, regAF.hi, reg);
                    fprintf(output, OPRR, "LD", "(HL-)", "A");
                    break;
-        case 0x0a: cycles = LoadByte(&regAF.hi, reg, mainMemory[regBC.word], memory);
+        case 0x0a: cycles = LoadByte(&regAF.hi, reg, Read(regBC.word), memory);
                    fprintf(output, OPRR, "LD", "A", "(BC)");
                    break;
-        case 0x1a: cycles = LoadByte(&regAF.hi, reg, mainMemory[regDE.word], memory);
+        case 0x1a: cycles = LoadByte(&regAF.hi, reg, Read(regDE.word), memory);
                    fprintf(output, OPRR, "LD", "A", "(DE)");
                    break;
-        case 0x2a: cycles = LoadByte(&regAF.hi, reg, mainMemory[regHL.word++], memory);
+        case 0x2a: cycles = LoadByte(&regAF.hi, reg, Read(regHL.word++), memory);
                    fprintf(output, OPRR, "LD", "A", "(HL+)");
                    break;
-        case 0x3a: cycles = LoadByte(&regAF.hi, reg, mainMemory[regHL.word--], memory);
+        case 0x3a: cycles = LoadByte(&regAF.hi, reg, Read(regHL.word--), memory);
                    fprintf(output, OPRR, "LD", "A", "(HL-)");
                    break;
 
@@ -220,7 +220,7 @@ short DecodeExecute(BYTE opcode, FILE *output)
         case 0x45: cycles = LoadByte(&regBC.hi, reg, regHL.lo, reg);
 				   fprintf(output, OPRR, "LD", "B", "L");
                    break;
-        case 0x46: cycles = LoadByte(&regBC.hi, reg, mainMemory[regHL.word], memory);
+        case 0x46: cycles = LoadByte(&regBC.hi, reg, Read(regHL.word), memory);
                    fprintf(output, OPRR, "LD", "B", "(HL)");
                    break;
         case 0x47: cycles = LoadByte(&regBC.hi, reg, regAF.hi, reg);
@@ -246,7 +246,7 @@ short DecodeExecute(BYTE opcode, FILE *output)
         case 0x4d: cycles = LoadByte(&regBC.lo, reg, regHL.lo, reg);
 				   fprintf(output, OPRR, "LD", "C", "L");
                    break;
-        case 0x4e: cycles = LoadByte(&regBC.lo, reg, mainMemory[regHL.word], memory);
+        case 0x4e: cycles = LoadByte(&regBC.lo, reg, Read(regHL.word), memory);
                    fprintf(output, OPRR, "LD", "C", "(HL)");
                    break;
         case 0x4f: cycles = LoadByte(&regBC.lo, reg, regAF.hi, reg);
@@ -272,7 +272,7 @@ short DecodeExecute(BYTE opcode, FILE *output)
         case 0x55: cycles = LoadByte(&regDE.hi, reg, regHL.lo, reg);
 				   fprintf(output, OPRR, "LD", "D", "L");
                    break;
-        case 0x56: cycles = LoadByte(&regDE.hi, reg, mainMemory[regHL.word], memory);
+        case 0x56: cycles = LoadByte(&regDE.hi, reg, Read(regHL.word), memory);
                    fprintf(output, OPRR, "LD", "D", "(HL)");
                    break;
         case 0x57: cycles = LoadByte(&regDE.hi, reg, regAF.hi, reg);
@@ -298,7 +298,7 @@ short DecodeExecute(BYTE opcode, FILE *output)
         case 0x5d: cycles = LoadByte(&regDE.lo, reg, regHL.lo, reg);
 				   fprintf(output, OPRR, "LD", "E", "L");
                    break;
-        case 0x5e: cycles = LoadByte(&regDE.lo, reg, mainMemory[regHL.word], memory);
+        case 0x5e: cycles = LoadByte(&regDE.lo, reg, Read(regHL.word), memory);
                    fprintf(output, OPRR, "LD", "E", "(HL)");
                    break;
         case 0x5f: cycles = LoadByte(&regDE.lo, reg, regAF.hi, reg);
@@ -324,7 +324,7 @@ short DecodeExecute(BYTE opcode, FILE *output)
         case 0x65: cycles = LoadByte(&regHL.hi, reg, regHL.lo, reg);
 				   fprintf(output, OPRR, "LD", "H", "L");
                    break;
-        case 0x66: cycles = LoadByte(&regHL.hi, reg, mainMemory[regHL.word], memory);
+        case 0x66: cycles = LoadByte(&regHL.hi, reg, Read(regHL.word), memory);
                    fprintf(output, OPRR, "LD", "H", "(HL)");
                    break;
         case 0x67: cycles = LoadByte(&regHL.hi, reg, regAF.hi, reg);
@@ -350,7 +350,7 @@ short DecodeExecute(BYTE opcode, FILE *output)
         case 0x6d: cycles = LoadByte(&regHL.lo, reg, regHL.lo, reg);
 				   fprintf(output, OPRR, "LD", "L", "L");
                    break;
-        case 0x6e: cycles = LoadByte(&regHL.lo, reg, mainMemory[regHL.word], memory);
+        case 0x6e: cycles = LoadByte(&regHL.lo, reg, Read(regHL.word), memory);
                    fprintf(output, OPRR, "LD", "L", "(HL)");
                    break;
         case 0x6f: cycles = LoadByte(&regHL.lo, reg, regAF.hi, reg);
@@ -399,7 +399,7 @@ short DecodeExecute(BYTE opcode, FILE *output)
         case 0x7d: cycles = LoadByte(&regAF.hi, reg, regHL.lo, reg);
 				   fprintf(output, OPRR, "LD", "A", "L");
                    break;
-        case 0x7e: cycles = LoadByte(&regAF.hi, reg, mainMemory[regHL.word], memory);
+        case 0x7e: cycles = LoadByte(&regAF.hi, reg, Read(regHL.word), memory);
                    fprintf(output, OPRR, "LD", "A", "(HL)");
                    break;
         case 0x7f: cycles = LoadByte(&regAF.hi, reg, regAF.hi, reg);
@@ -425,7 +425,7 @@ short DecodeExecute(BYTE opcode, FILE *output)
         case 0x85: cycles = AddByte(regHL.lo, reg);
 				   fprintf(output, OPRR, "ADD", "A", "L");
                    break;
-        case 0x86: cycles = AddByte(mainMemory[regHL.word], memory);
+        case 0x86: cycles = AddByte(Read(regHL.word), memory);
                    fprintf(output, OPRR, "ADD", "A", "(HL)");
                    break;
         case 0x87: cycles = AddByte(regAF.hi, reg);
@@ -451,7 +451,7 @@ short DecodeExecute(BYTE opcode, FILE *output)
         case 0x95: cycles = Subtract(regHL.lo, reg);
 				   fprintf(output, OPR, "SUB", "L");
                    break;
-        case 0x96: cycles = Subtract(mainMemory[regHL.word], memory);
+        case 0x96: cycles = Subtract(Read(regHL.word), memory);
                    fprintf(output, OPR, "SUB", "(HL)");
                    break;
         case 0x97: cycles = Subtract(regAF.hi, reg);
@@ -477,7 +477,7 @@ short DecodeExecute(BYTE opcode, FILE *output)
         case 0xad: cycles = Xor(regHL.lo, reg);
                    fprintf(output, OPR, "XOR", "L");
                    break;
-        case 0xae: cycles = Xor(mainMemory[regHL.word], memory);
+        case 0xae: cycles = Xor(Read(regHL.word), memory);
                    fprintf(output, OPR, "XOR", "(HL)");
                    break;
         case 0xaf: cycles = Xor(regAF.hi, reg);
@@ -503,7 +503,7 @@ short DecodeExecute(BYTE opcode, FILE *output)
         case 0xbd: cycles = Compare(regHL.lo, reg);
 				   fprintf(output, OPR, "CP", "L");
                    break;
-        case 0xbe: cycles = Compare(mainMemory[regHL.word], memory);
+        case 0xbe: cycles = Compare(Read(regHL.word), memory);
                    fprintf(output, OPR, "CP", "(HL)");
                    break;
         case 0xbf: cycles = Compare(regAF.hi, reg);
@@ -578,7 +578,7 @@ short DecodeExecute(BYTE opcode, FILE *output)
                    fprintf(output, OPBMR, "LDH", byteImmediate, "A");
                    break;
         case 0xf0: byteImmediate = FetchByte(output);
-                   cycles = LoadByte(&regAF.hi, reg, mainMemory[byteImmediate + REG_P1], immediateOffset);
+                   cycles = LoadByte(&regAF.hi, reg, Read(byteImmediate + REG_P1), immediateOffset);
                    fprintf(output, OPRBM, "LDH", "A", FetchByte(output));
                    break;
 
@@ -586,7 +586,7 @@ short DecodeExecute(BYTE opcode, FILE *output)
         case 0xe2: cycles = LoadByte(&mainMemory[regBC.lo + REG_P1], regOffset, regAF.hi, reg);
                    fprintf(output, OPRR, "LD", "(C)", "A");
                    break;
-        case 0xf2: cycles = LoadByte(&regAF.hi, reg, mainMemory[regBC.lo + REG_P1], regOffset);
+        case 0xf2: cycles = LoadByte(&regAF.hi, reg, Read(regBC.lo + REG_P1), regOffset);
                    fprintf(output, OPRR, "LD", "A", "(C)");
                    break;
 
@@ -596,7 +596,7 @@ short DecodeExecute(BYTE opcode, FILE *output)
                    fprintf(output, OPWMR, "LD", address, "A");
                    break;
         case 0xfa: address = FetchWord(output);
-                   cycles = LoadByte(&regAF.hi, reg, mainMemory[address], memAtImmediate);
+                   cycles = LoadByte(&regAF.hi, reg, Read(address), memAtImmediate);
                    fprintf(output, OPRWM, "LD", "A", FetchWord(output));
                    break;
 

@@ -81,6 +81,21 @@ void UnsetFlag(enum cpuFlag flag)
     regAF.lo &= ~(1 << flag);
 }
 
+BYTE Read(WORD address)
+{
+    if(address < 0x0100)
+    {
+        if(mainMemory[REG_BTSTRP])
+            return mainMemory[address];
+        else
+            return gamePakMem[address];
+    }
+    else if(address < VIDEO_RAM)
+        return gamePakMem[address];
+    else
+        return mainMemory[address];
+}
+
 void Write(BYTE *dest, BYTE src)
 {
     if(dest < &mainMemory[0] || dest > &mainMemory[MAIN_MEM_SIZE - 1])
@@ -122,7 +137,7 @@ void DMATransfer(BYTE source)
     WORD address = source << 8;
 
     for(int i = 0; i < 0xA0; i++)
-        Write(&mainMemory[OAM_TABLE + i], mainMemory[address + i]);
+        Write(&mainMemory[OAM_TABLE + i], Read(address + i));
 }
 
 // ========================== Load Instructions =========================== //

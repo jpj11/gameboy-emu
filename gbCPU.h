@@ -41,7 +41,18 @@ extern const WORD INTERRUPT_VECTORS[];
 #define TAC_TWO   64
 #define TAC_THREE 256
 
-#define OAM_TABLE 0xfe00
+// Memory map sections
+#define ROM_BANK_00  0x0000
+#define ROM_BANK_NN  0x4000
+#define VIDEO_RAM    0x8000
+#define EXTERNAL_RAM 0xa000
+#define WRAM_BANK_0  0xc000
+#define WRAM_BANK_1  0xd000
+#define WRAM_ECHO    0xe000
+#define OAM_TABLE    0xfe00
+#define UNUSABLE     0xfea0
+#define IO_PORTS     0xff00
+#define HRAM_STACK   0xff80
 
 #define REG_P1   0xff00
 
@@ -62,6 +73,8 @@ extern const WORD INTERRUPT_VECTORS[];
 #define REG_BGP  0xff47
 #define REG_OBP0 0xff48
 #define REG_OBP1 0xff49
+
+#define REG_BTSTRP 0xff50
 
 #define REG_WY   0xff4a
 #define REG_WX   0xff4b
@@ -155,6 +168,7 @@ BYTE FetchByte(FILE *output);
 WORD FetchWord(FILE *output);
 short DecodeExecute(BYTE opcode, FILE *output);
 
+BYTE Read(WORD address);
 void Write(BYTE *dest, BYTE src);
 
 void RequestInterrupt(enum interrupt requested);
